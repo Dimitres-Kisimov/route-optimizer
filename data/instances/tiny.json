@@ -1,0 +1,49 @@
+{
+  "name": "tiny",
+  "seed": 0,
+  "depot": 0,
+  "capacity": 10,
+  "num_vehicles": 2,
+  "coords": [
+    [
+      50.0,
+      50.0
+    ],
+    [
+      70.0,
+      50.0
+    ],
+    [
+      50.0,
+      70.0
+    ],
+    [
+      30.0,
+      50.0
+    ],
+    [
+      50.0,
+      30.0
+    ],
+    [
+      70.0,
+      70.0
+    ]
+  ],
+  "demands": [
+    0,
+    3,
+    3,
+    3,
+    3,
+    4
+  ],
+  "meta": {
+    "num_customers": 5,
+    "num_clusters": 1,
+    "total_demand": 16,
+    "min_vehicles_by_capacity": 2,
+    "distance": "euclidean",
+    "note": "hand-checkable; used by the test suite"
+  }
+}
