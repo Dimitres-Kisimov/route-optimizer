@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>route-optimizer — CVRP dashboard</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5b6470;
+    --line: #e2e6ea; --depot: #d55e00; --accent: #0072b2;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181d; --panel: #1c2228; --ink: #e8ecef; --muted: #9aa4b0;
+    --line: #2b333b; --depot: #ff8c42; --accent: #4aa8e0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+  }
+  header {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 16px 22px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  button {
+    font: inherit; padding: 6px 12px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); border-radius: 8px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  main { display: grid; grid-template-columns: 1fr 320px; gap: 18px; padding: 18px 22px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .canvas-wrap { padding: 10px; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 8px; }
+  .panel { padding: 16px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .kpi .v { font-size: 20px; font-weight: 680; }
+  .kpi .l { font-size: 12px; color: var(--muted); }
+  .saved { font-size: 14px; color: var(--accent); font-weight: 640; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .foot { color: var(--muted); font-size: 12px; padding: 4px 22px 22px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>route-optimizer</h1>
+  <span class="sub" id="subtitle">loading…</span>
+  <span class="spacer"></span>
+  <button id="toggle-method">Show savings routes</button>
+  <button id="toggle-theme">Dark</button>
+</header>
+
+<main>
+  <div class="card canvas-wrap">
+    <canvas id="map" width="900" height="900"></canvas>
+  </div>
+  <div class="card panel">
+    <h2 id="method-label">OR-Tools (GLS)</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="kpi-dist">–</div><div class="l">total distance</div></div>
+      <div class="kpi"><div class="v" id="kpi-veh">–</div><div class="l">vehicles used</div></div>
+      <div class="kpi"><div class="v" id="kpi-cust">–</div><div class="l">customers</div></div>
+      <div class="kpi"><div class="v" id="kpi-time">–</div><div class="l">solve time</div></div>
+    </div>
+    <div class="saved" id="saved-line"></div>
+    <h2>Per-route load</h2>
+    <table>
+      <thead><tr><th>Vehicle</th><th>Stops</th><th>Load</th><th>Distance</th></tr></thead>
+      <tbody id="route-rows"></tbody>
+    </table>
+  </div>
+</main>
+<div class="foot" id="foot"></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const PALETTE = ["#0072B2","#D55E00","#009E73","#CC79A7","#E69F00","#56B4E9",
+    "#B79F00","#000000","#8C564B","#7F7F7F","#1B9E77","#666666","#A6761D","#E7298A","#66A61E"];
+
+  const D = window.ROUTEOPT;
+  if (!D) { document.getElementById("subtitle").textContent = "data.js missing — run web/build_data.py"; return; }
+
+  const inst = D.instance;
+  const canvas = document.getElementById("map");
+  const ctx = canvas.getContext("2d");
+  let showSavings = false;
+
+  document.getElementById("subtitle").textContent =
+    `${inst.name} · ${inst.num_customers} customers · demand ${inst.total_demand} · capacity ${inst.capacity} · fleet ${inst.num_vehicles}`;
+
+  function dist(a, b) {
+    const dx = inst.coords[a][0] - inst.coords[b][0];
+    const dy = inst.coords[a][1] - inst.coords[b][1];
+    return Math.hypot(dx, dy);
+  }
+  function routeDistance(r) { let s = 0; for (let i = 0; i < r.length - 1; i++) s += dist(r[i], r[i+1]); return s; }
+
+  function bounds() {
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    for (const [x, y] of inst.coords) { minx = Math.min(minx, x); miny = Math.min(miny, y); maxx = Math.max(maxx, x); maxy = Math.max(maxy, y); }
+    return { minx, miny, maxx, maxy };
+  }
+
+  function draw() {
+    const sol = showSavings ? D.clarke_wright : D.or_tools;
+    const W = canvas.width, H = canvas.height, pad = 40;
+    const b = bounds();
+    const sx = (W - 2*pad) / Math.max(1e-6, b.maxx - b.minx);
+    const sy = (H - 2*pad) / Math.max(1e-6, b.maxy - b.miny);
+    const s = Math.min(sx, sy);
+    const px = x => pad + (x - b.minx) * s;
+    const py = y => H - (pad + (y - b.miny) * s);
+
+    const css = getComputedStyle(document.documentElement);
+    ctx.clearRect(0, 0, W, H);
+
+    // routes
+    sol.routes.forEach((r, i) => {
+      ctx.strokeStyle = PALETTE[i % PALETTE.length];
+      ctx.lineWidth = 2.4; ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      r.forEach((n, k) => { const X = px(inst.coords[n][0]), Y = py(inst.coords[n][1]); k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+
+    // customers
+    ctx.fillStyle = css.getPropertyValue("--muted").trim();
+    for (let n = 0; n < inst.coords.length; n++) {
+      if (n === inst.depot) continue;
+      ctx.beginPath(); ctx.arc(px(inst.coords[n][0]), py(inst.coords[n][1]), 4, 0, 7); ctx.fill();
+    }
+    // depot star-ish
+    const dx = px(inst.coords[inst.depot][0]), dy = py(inst.coords[inst.depot][1]);
+    ctx.fillStyle = css.getPropertyValue("--depot").trim();
+    ctx.beginPath(); ctx.arc(dx, dy, 9, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.2; ctx.stroke();
+
+    // panel
+    document.getElementById("method-label").textContent = showSavings ? "Clarke-Wright savings" : "OR-Tools (GLS)";
+    document.getElementById("kpi-dist").textContent = sol.total_distance.toFixed(1);
+    document.getElementById("kpi-veh").textContent = sol.vehicles_used;
+    document.getElementById("kpi-cust").textContent = inst.num_customers;
+    document.getElementById("kpi-time").textContent = sol.solve_time_s < 0.01 ? "<0.01s" : sol.solve_time_s.toFixed(2) + "s";
+
+    const o = D.or_tools.total_distance, c = D.clarke_wright.total_distance;
+    const savedPct = (100 * (c - o) / c);
+    document.getElementById("saved-line").textContent =
+      `OR-Tools is ${savedPct >= 0 ? savedPct.toFixed(1) + "% shorter" : (-savedPct).toFixed(1) + "% longer"} than the savings heuristic (${o.toFixed(0)} vs ${c.toFixed(0)}).`;
+
+    const tbody = document.getElementById("route-rows");
+    tbody.innerHTML = "";
+    sol.routes.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      const sw = `<span class="swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>`;
+      tr.innerHTML = `<td>${sw}${i + 1}</td><td>${r.length - 2}</td><td>${sol.loads[i]}/${inst.capacity}</td><td>${routeDistance(r).toFixed(1)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById("toggle-method").addEventListener("click", (e) => {
+    showSavings = !showSavings;
+    e.target.textContent = showSavings ? "Show OR-Tools routes" : "Show savings routes";
+    e.target.classList.toggle("on", showSavings);
+    draw();
+  });
+
+  const themeBtn = document.getElementById("toggle-theme");
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    themeBtn.textContent = t === "dark" ? "Light" : "Dark";
+    draw();
+  }
+  themeBtn.addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+  applyTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+  document.getElementById("foot").textContent =
+    "Synthetic instance. Euclidean distances (straight-line, not road network). Single depot, homogeneous fleet. Toggle to compare OR-Tools against the Clarke-Wright savings baseline.";
+})();
+</script>
+</body>
+</html>
