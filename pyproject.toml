@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Last-mile delivery route optimizer: OR-Tools CVRP vs the classic Clarke-Wright savings heuristic."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "Proprietary" }
 authors = [{ name = "Dimitres Kisimov" }]
 
 [tool.setuptools.packages.find]

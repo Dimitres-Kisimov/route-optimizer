@@ -87,5 +87,5 @@ I would rather state these than oversell:
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Data is synthetic; OR-Tools is Apache-2.0. See
+© 2026 Dimitres Kisimov — all rights reserved; published for portfolio review. See LICENSE. Data is synthetic; OR-Tools is Apache-2.0. See
 [CREDITS.md](CREDITS.md).
