@@ -90,6 +90,33 @@ bin-packing feasibility puzzle before any distance is optimised; real distributo
 also run with spare capacity. The solver still *uses* as few vehicles as it can —
 on `n60` it parks 2 of the 12.
 
+## Fleet-size sensitivity
+
+`routeopt/sensitivity.py` turns the single-instance solve into a planning curve.
+The lever is **vehicle capacity** (bigger vans ⇒ fewer vans), swept roughly from
+half-size to double-size around the instance's own capacity. At each capacity the
+deterministic Clarke-Wright savings heuristic is re-run, and — per distinct number
+of vehicles it then needs — the minimum-distance plan is kept, giving an efficient
+frontier of *fleet size → (total distance, longest route, cost, CO2)*.
+
+Two honest points about the direction:
+
+- The routing objective is total distance with **no fixed per-vehicle cost**, so
+  it prefers fewer, fuller vans (fewer depot round-trips). Minimum vehicles and
+  minimum distance therefore pull the *same* way; the genuine tension is with
+  **service** — the longest single route (≈ time to the last customer) grows as
+  the fleet consolidates. The frontier reports that longest route as its service
+  column.
+- The `€1.00/km` and `250 g/km` figures are **illustrative estimates** (the same
+  as `docs/BUSINESS_CASE.md`), not certified numbers; distance units are treated
+  as kilometres. The cost column is variable only — a fixed per-van cost, if
+  added, shifts the optimum further toward consolidation.
+
+The engine is the deterministic savings heuristic (not the time-limited OR-Tools
+metaheuristic), so `deliverables/fleet_sensitivity.{csv,svg,md}` are byte-for-byte
+reproducible. OR-Tools would shave a few percent off every point without changing
+the shape of the trade-off.
+
 ## Reproducibility
 
 Instances are generated with fixed NumPy seeds (`data/generate_instances.py`), so

@@ -13,6 +13,7 @@ from pathlib import Path
 from .heuristic import Solution, clarke_wright, nearest_neighbour
 from .model import distance_matrix, load_instance
 from .report import build_deliverables
+from .sensitivity import build_fleet_sensitivity
 from .solver import solve_cvrp
 
 
@@ -28,12 +29,40 @@ def _pct(base: float, imp: float) -> float:
     return 100.0 * (base - imp) / base if base > 0 else 0.0
 
 
+def _run_fleet_sweep(instance, metric: str) -> int:
+    out = build_fleet_sensitivity(instance, metric=metric)
+    frontier = out["frontier"]
+    print(
+        "\nfleet-size sensitivity (Clarke-Wright savings; capacity swept, "
+        "vehicles is the consequence):\n"
+    )
+    print(f"{'vehicles':>8} {'capacity':>8} {'distance':>10} {'longest':>9} "
+          f"{'cost_EUR':>9} {'CO2_kg':>8}")
+    for p in frontier:
+        print(
+            f"{p.vehicles:8d} {p.capacity:8d} {p.total_distance:10.1f} "
+            f"{p.longest_route:9.1f} {p.est_cost_eur:9.0f} {p.est_co2_kg:8.1f}"
+        )
+    print("\ntrade-off read:")
+    for line in out["read"]:
+        print(f"  {line}")
+    print(f"\nwrote {out['csv']}")
+    print(f"wrote {out['svg']}")
+    print(f"wrote {out['md']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="routeopt", description="CVRP route optimizer (OR-Tools vs savings).")
     ap.add_argument("--instance", required=True, type=Path, help="path to an instance JSON")
     ap.add_argument("--metric", default="euclidean", choices=["euclidean", "manhattan"])
     ap.add_argument("--time-limit", type=int, default=5, help="OR-Tools wall-clock seconds")
     ap.add_argument("--compare", action="store_true", help="run all three methods and print the gap")
+    ap.add_argument(
+        "--sweep-fleet",
+        action="store_true",
+        help="fleet-size/cost/service sensitivity (deterministic); writes CSV+SVG+MD, skips OR-Tools",
+    )
     ap.add_argument("--no-deliverables", action="store_true", help="skip writing CSV/PNG/summary")
     args = ap.parse_args(argv)
 
@@ -45,6 +74,9 @@ def main(argv: list[str] | None = None) -> int:
         f"demand {instance.total_demand}, capacity {instance.capacity}, "
         f"fleet {instance.num_vehicles}, metric {args.metric}"
     )
+
+    if args.sweep_fleet:
+        return _run_fleet_sweep(instance, args.metric)
 
     ort = solve_cvrp(instance, metric=args.metric, time_limit_s=args.time_limit)
 

@@ -37,14 +37,45 @@ of it is exactly what the metaheuristic is for. On the 100-customer instance the
 gap is smaller (~1%) — the savings heuristic happens to find near-optimal
 structure there, which is a fair thing to show rather than hide.
 
+## Fleet-size sensitivity (what-if)
+
+Cutting one instance is a point answer; a fleet planner works a curve. So there
+is a second layer that asks *how big should the fleet be at all?* It sweeps the
+sizing lever — **van capacity** (bigger vans ⇒ fewer vans) — with the
+deterministic Clarke-Wright savings heuristic and reads off, for each resulting
+fleet size, the total distance, the longest single route (a **service** proxy —
+time to the last customer), and a labelled cost/CO2 line.
+
+![Fleet-size sensitivity frontier for the 60-customer instance](deliverables/fleet_sensitivity.svg)
+
+The honest finding is the direction. Because the model minimises distance with no
+fixed per-van cost, **fewer, fuller vans win on both distance and CO2** — the
+thing you trade away is service. On `n60` (`deliverables/fleet_sensitivity.csv`):
+
+```
+Operating point — 10 vans (capacity 51): 1,017.2 km, ~254.3 kg CO2, ~€1,017/round.
+Consolidating 10 → 9 vans:  distance −5.6%, CO2 −5.6%, longest route +0.1% (service).
+Leanest modelled 5 vans:    distance −33.7%, CO2 −33.7%, longest route +4.4% (service).
+Adding a van 10 → 11:       distance +5.4%, CO2 +5.4%, longest route −0.3% (service).
+```
+
+So the "more vans = more driving" intuition is backwards here: **more vans buys
+shorter routes (better service) at the cost of more total distance/CO2, not less.**
+Cost is variable only (distance × €/km); a real fixed per-van cost would push the
+optimum further toward consolidation. The **€1.00/km and 250 g/km factors are
+illustrative estimates, not certified** — distance is straight-line synthetic-grid
+units treated as km. Full table and the drawn frontier:
+`deliverables/fleet_sensitivity.md` / `.csv` / `.svg`.
+
 ## Run it
 
 ```bash
 pip install ortools numpy matplotlib pandas
 python data/generate_instances.py                              # seeded instances -> data/instances/
 python -m routeopt --instance data/instances/n60.json --compare   # print all three methods + the gap
+python -m routeopt --instance data/instances/n60.json --sweep-fleet  # fleet-size sensitivity (CSV+SVG+MD)
 python web/build_data.py --instance data/instances/n60.json    # web/data.js -> open web/index.html offline
-pytest -q                                                      # 11 tests, ~12s
+pytest -q                                                      # 18 tests, ~13s
 ```
 
 `python -m routeopt --instance ...` also writes the deliverables:
@@ -68,6 +99,7 @@ guided local search) — is written out in [`docs/METHOD.md`](docs/METHOD.md).
 - `routeopt/heuristic.py` — Clarke-Wright savings and nearest-neighbour, from scratch.
 - `routeopt/solver.py` — the OR-Tools CVRP solver.
 - `routeopt/report.py` — the CSV / PNG / summary deliverables.
+- `routeopt/sensitivity.py` — the fleet-size / cost / service / CO2 what-if sweep.
 
 ## Limitations
 

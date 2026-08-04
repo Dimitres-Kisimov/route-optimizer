@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460" viewBox="0 0 760 460" font-family="system-ui,Segoe UI,Arial,sans-serif">
+<rect width="760" height="460" fill="#FFFFFF"/>
+<text x="64" y="30" font-size="17" font-weight="600" fill="#222222">Fleet-size sensitivity - n60</text>
+<text x="64" y="47" font-size="11" fill="#666666">Clarke-Wright savings; CO2 250 g/km &amp; cost EUR 1.00/km are illustrative estimates</text>
+<line x1="64" y1="396.0" x2="694" y2="396.0" stroke="#DDDDDD" stroke-width="1"/>
+<text x="56" y="400.0" font-size="11" text-anchor="end" fill="#0072B2">0</text>
+<text x="702" y="400.0" font-size="11" text-anchor="start" fill="#D55E00">0</text>
+<line x1="64" y1="311.0" x2="694" y2="311.0" stroke="#DDDDDD" stroke-width="1"/>
+<text x="56" y="315.0" font-size="11" text-anchor="end" fill="#0072B2">500</text>
+<text x="702" y="315.0" font-size="11" text-anchor="start" fill="#D55E00">50</text>
+<line x1="64" y1="226.0" x2="694" y2="226.0" stroke="#DDDDDD" stroke-width="1"/>
+<text x="56" y="230.0" font-size="11" text-anchor="end" fill="#0072B2">1000</text>
+<text x="702" y="230.0" font-size="11" text-anchor="start" fill="#D55E00">100</text>
+<line x1="64" y1="141.0" x2="694" y2="141.0" stroke="#DDDDDD" stroke-width="1"/>
+<text x="56" y="145.0" font-size="11" text-anchor="end" fill="#0072B2">1500</text>
+<text x="702" y="145.0" font-size="11" text-anchor="start" fill="#D55E00">150</text>
+<line x1="64" y1="56.0" x2="694" y2="56.0" stroke="#DDDDDD" stroke-width="1"/>
+<text x="56" y="60.0" font-size="11" text-anchor="end" fill="#0072B2">2000</text>
+<text x="702" y="60.0" font-size="11" text-anchor="start" fill="#D55E00">200</text>
+<line x1="64.0" y1="396" x2="64.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="64.0" y="415" font-size="11" text-anchor="middle" fill="#222222">5</text>
+<line x1="106.0" y1="396" x2="106.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="106.0" y="415" font-size="11" text-anchor="middle" fill="#222222">6</text>
+<line x1="148.0" y1="396" x2="148.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="148.0" y="415" font-size="11" text-anchor="middle" fill="#222222">7</text>
+<line x1="190.0" y1="396" x2="190.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="190.0" y="415" font-size="11" text-anchor="middle" fill="#222222">8</text>
+<line x1="232.0" y1="396" x2="232.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="232.0" y="415" font-size="11" text-anchor="middle" fill="#222222">9</text>
+<line x1="274.0" y1="396" x2="274.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="274.0" y="415" font-size="11" text-anchor="middle" fill="#222222">10</text>
+<line x1="316.0" y1="396" x2="316.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="316.0" y="415" font-size="11" text-anchor="middle" fill="#222222">11</text>
+<line x1="358.0" y1="396" x2="358.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="358.0" y="415" font-size="11" text-anchor="middle" fill="#222222">12</text>
+<line x1="400.0" y1="396" x2="400.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="400.0" y="415" font-size="11" text-anchor="middle" fill="#222222">13</text>
+<line x1="442.0" y1="396" x2="442.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="442.0" y="415" font-size="11" text-anchor="middle" fill="#222222">14</text>
+<line x1="484.0" y1="396" x2="484.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="484.0" y="415" font-size="11" text-anchor="middle" fill="#222222">15</text>
+<line x1="526.0" y1="396" x2="526.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="526.0" y="415" font-size="11" text-anchor="middle" fill="#222222">16</text>
+<line x1="568.0" y1="396" x2="568.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="568.0" y="415" font-size="11" text-anchor="middle" fill="#222222">17</text>
+<line x1="610.0" y1="396" x2="610.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="610.0" y="415" font-size="11" text-anchor="middle" fill="#222222">18</text>
+<line x1="694.0" y1="396" x2="694.0" y2="401" stroke="#222222" stroke-width="1"/>
+<text x="694.0" y="415" font-size="11" text-anchor="middle" fill="#222222">20</text>
+<text x="379.0" y="444" font-size="12" text-anchor="middle" fill="#222222">vehicles used (fleet size)</text>
+<text x="16" y="226.0" font-size="12" text-anchor="middle" fill="#0072B2" transform="rotate(-90 16 226.0)">total distance (km) &#183; cost/CO2</text>
+<text x="746" y="226.0" font-size="12" text-anchor="middle" fill="#D55E00" transform="rotate(90 746 226.0)">longest route (km) &#183; service</text>
+<polyline points="64.0,130.3 106.0,111.06 148.0,130.89 190.0,140.19 232.0,141.18 274.0,141.53 316.0,142.27 358.0,156.33 400.0,156.31 442.0,156.21 484.0,156.56 526.0,157.95 568.0,166.46 610.0,166.46 694.0,166.5" fill="none" stroke="#D55E00" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="64.0" cy="130.3" r="3" fill="#D55E00"/>
+<circle cx="106.0" cy="111.06" r="3" fill="#D55E00"/>
+<circle cx="148.0" cy="130.89" r="3" fill="#D55E00"/>
+<circle cx="190.0" cy="140.19" r="3" fill="#D55E00"/>
+<circle cx="232.0" cy="141.18" r="3" fill="#D55E00"/>
+<circle cx="274.0" cy="141.53" r="3" fill="#D55E00"/>
+<circle cx="316.0" cy="142.27" r="3" fill="#D55E00"/>
+<circle cx="358.0" cy="156.33" r="3" fill="#D55E00"/>
+<circle cx="400.0" cy="156.31" r="3" fill="#D55E00"/>
+<circle cx="442.0" cy="156.21" r="3" fill="#D55E00"/>
+<circle cx="484.0" cy="156.56" r="3" fill="#D55E00"/>
+<circle cx="526.0" cy="157.95" r="3" fill="#D55E00"/>
+<circle cx="568.0" cy="166.46" r="3" fill="#D55E00"/>
+<circle cx="610.0" cy="166.46" r="3" fill="#D55E00"/>
+<circle cx="694.0" cy="166.5" r="3" fill="#D55E00"/>
+<polyline points="64.0,281.26 106.0,269.9 148.0,259.37 190.0,243.94 232.0,232.69 274.0,223.07 316.0,213.74 358.0,201.24 400.0,186.34 442.0,176.45 484.0,162.61 526.0,151.75 568.0,145.87 610.0,134.05 694.0,105.8" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+<circle cx="64.0" cy="281.26" r="3.5" fill="#0072B2"/>
+<circle cx="106.0" cy="269.9" r="3.5" fill="#0072B2"/>
+<circle cx="148.0" cy="259.37" r="3.5" fill="#0072B2"/>
+<circle cx="190.0" cy="243.94" r="3.5" fill="#0072B2"/>
+<circle cx="232.0" cy="232.69" r="3.5" fill="#0072B2"/>
+<circle cx="274.0" cy="223.07" r="3.5" fill="#0072B2"/>
+<circle cx="316.0" cy="213.74" r="3.5" fill="#0072B2"/>
+<circle cx="358.0" cy="201.24" r="3.5" fill="#0072B2"/>
+<circle cx="400.0" cy="186.34" r="3.5" fill="#0072B2"/>
+<circle cx="442.0" cy="176.45" r="3.5" fill="#0072B2"/>
+<circle cx="484.0" cy="162.61" r="3.5" fill="#0072B2"/>
+<circle cx="526.0" cy="151.75" r="3.5" fill="#0072B2"/>
+<circle cx="568.0" cy="145.87" r="3.5" fill="#0072B2"/>
+<circle cx="610.0" cy="134.05" r="3.5" fill="#0072B2"/>
+<circle cx="694.0" cy="105.8" r="3.5" fill="#0072B2"/>
+<line x1="76" y1="70" x2="102" y2="70" stroke="#0072B2" stroke-width="2.5"/>
+<text x="108" y="74" font-size="11" fill="#222222">total distance (cost / CO2)</text>
+<line x1="76" y1="88" x2="102" y2="88" stroke="#D55E00" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="108" y="92" font-size="11" fill="#222222">longest route (service)</text>
+</svg>
