@@ -15,6 +15,7 @@ from .model import distance_matrix, load_instance
 from .report import build_deliverables
 from .sensitivity import build_fleet_sensitivity
 from .solver import solve_cvrp
+from .timewindows import build_service_analysis
 
 
 def _fmt(sol: Solution) -> str:
@@ -52,6 +53,29 @@ def _run_fleet_sweep(instance, metric: str) -> int:
     return 0
 
 
+def _run_service(instance, metric: str, time_limit_s: int) -> int:
+    out = build_service_analysis(instance, metric=metric, time_limit_s=time_limit_s)
+    audit = out["audit"]
+    vrptw = out["vrptw"]
+    vrptw_audit = out["vrptw_audit"]
+    savings = out["savings"]
+    print("\nservice-level / time-window analysis (synthetic labelled windows):\n")
+    print(
+        f"  time-blind savings plan: {audit.on_time_stops}/{audit.total_stops} on time "
+        f"({audit.on_time_pct:.1f}%), {audit.late_stops} late, worst "
+        f"{audit.worst_lateness_min:.0f} min, dist {savings.total_distance:,.1f}"
+    )
+    print(
+        f"  time-aware VRPTW solve:  {vrptw_audit.on_time_stops}/{vrptw_audit.total_stops} "
+        f"on time ({vrptw_audit.on_time_pct:.1f}%), dist {vrptw.total_distance:,.1f} "
+        f"(+{100.0 * (vrptw.total_distance - savings.total_distance) / savings.total_distance:.1f}% "
+        f"vs time-blind), t={vrptw.solve_time_s:.1f}s"
+    )
+    print(f"\nwrote {out['csv']}")
+    print(f"wrote {out['md']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="routeopt", description="CVRP route optimizer (OR-Tools vs savings).")
     ap.add_argument("--instance", required=True, type=Path, help="path to an instance JSON")
@@ -62,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
         "--sweep-fleet",
         action="store_true",
         help="fleet-size/cost/service sensitivity (deterministic); writes CSV+SVG+MD, skips OR-Tools",
+    )
+    ap.add_argument(
+        "--service",
+        action="store_true",
+        help="time-window (VRPTW) service-level analysis; audits the time-blind plan and "
+        "solves the time-aware one, writes service_audit.csv + service_level.md",
     )
     ap.add_argument("--no-deliverables", action="store_true", help="skip writing CSV/PNG/summary")
     args = ap.parse_args(argv)
@@ -77,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.sweep_fleet:
         return _run_fleet_sweep(instance, args.metric)
+
+    if args.service:
+        return _run_service(instance, args.metric, args.time_limit)
 
     ort = solve_cvrp(instance, metric=args.metric, time_limit_s=args.time_limit)
 

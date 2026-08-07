@@ -67,6 +67,32 @@ illustrative estimates, not certified** — distance is straight-line synthetic-
 units treated as km. Full table and the drawn frontier:
 `deliverables/fleet_sensitivity.md` / `.csv` / `.svg`.
 
+## Time windows & service level (VRPTW)
+
+Capacity is not the only promise a distributor makes. Deliveries come with a
+*window* — "before noon", "after 2pm" — and the base plan never looks at the
+clock. So there is a third layer that adds **time windows** and asks the service
+question: *how many promises does the time-blind plan already keep, and what does
+guaranteeing the rest cost?*
+
+On `n60` with synthetic morning / afternoon / anytime windows (labelled estimates:
+an 8-hour day, 40 km/h, 5 min/stop):
+
+- The **time-blind Clarke-Wright** plan keeps **41 of 60** windows (68%) — 19
+  deliveries land late, the worst **107 minutes** past due. That audit is
+  deterministic (`deliverables/service_audit.csv`).
+- Giving the **same OR-Tools engine a time dimension** (the classic **VRPTW**)
+  keeps **all 60** windows by construction, for **+1.2% distance** over the
+  time-blind plan — 19 late deliveries fixed for barely more driving, because the
+  better routing largely pays for the added constraint. (Held against the
+  time-blind OR-Tools *optimum* rather than the savings plan, the intrinsic price
+  of the window constraint is closer to ~5%.)
+
+Full write-up: `deliverables/service_level.md`. The windows are **synthetic and
+labelled**; the VRPTW distance comes from a time-limited metaheuristic, so it
+wobbles a fraction of a percent between runs, while the on-time audit of the
+deterministic savings plan does not.
+
 ## Run it
 
 ```bash
@@ -74,8 +100,9 @@ pip install ortools numpy matplotlib pandas
 python data/generate_instances.py                              # seeded instances -> data/instances/
 python -m routeopt --instance data/instances/n60.json --compare   # print all three methods + the gap
 python -m routeopt --instance data/instances/n60.json --sweep-fleet  # fleet-size sensitivity (CSV+SVG+MD)
+python -m routeopt --instance data/instances/n60.json --service   # time-window (VRPTW) service-level analysis
 python web/build_data.py --instance data/instances/n60.json    # web/data.js -> open web/index.html offline
-pytest -q                                                      # 18 tests, ~13s
+pytest -q                                                      # 26 tests, ~25s
 ```
 
 `python -m routeopt --instance ...` also writes the deliverables:
@@ -100,6 +127,8 @@ guided local search) — is written out in [`docs/METHOD.md`](docs/METHOD.md).
 - `routeopt/solver.py` — the OR-Tools CVRP solver.
 - `routeopt/report.py` — the CSV / PNG / summary deliverables.
 - `routeopt/sensitivity.py` — the fleet-size / cost / service / CO2 what-if sweep.
+- `routeopt/timewindows.py` — time windows (VRPTW) on the OR-Tools engine plus the
+  deterministic on-time / service-level audit of the time-blind plan.
 
 ## Limitations
 
@@ -111,9 +140,11 @@ I would rather state these than oversell:
 - **Euclidean distances, not roads.** Distance is straight-line (a Manhattan L1
   option exists as a crude grid proxy). A production system would use a road-network
   distance/time matrix from an OSRM/Valhalla-style engine, and the routes would shift.
-- **Single depot, homogeneous fleet, no time windows.** All vans are identical and
-  start from one depot; there are no delivery time windows, service times, or driver
-  shifts. Those are the obvious next constraints and OR-Tools supports all of them.
+- **Single depot, homogeneous fleet.** All vans are identical and start from one
+  depot. Time windows *are* now modelled (the VRPTW / service-level layer above),
+  but on **synthetic** windows, and a fixed per-stop service time. Multi-depot,
+  heterogeneous fleets, driver shifts and variable service times are the next
+  constraints, and OR-Tools supports all of them.
 - **GLS is time-limited, so its final number wobbles** a fraction of a percent between
   runs. The baselines are deterministic; the headline gap is stable to within noise.
 

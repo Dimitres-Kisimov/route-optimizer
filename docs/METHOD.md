@@ -117,6 +117,41 @@ metaheuristic), so `deliverables/fleet_sensitivity.{csv,svg,md}` are byte-for-by
 reproducible. OR-Tools would shave a few percent off every point without changing
 the shape of the trade-off.
 
+## Time windows (VRPTW) & the service-level audit
+
+`routeopt/timewindows.py` adds the constraint the base CVRP ignores: *when* a van
+reaches each customer. A light time model sits on top of the existing instance —
+travel time is `distance x 60 / speed` minutes, each stop costs a fixed service
+time, and every customer carries a delivery window `[ready, due]` (the time within
+which service may *start*; a van that arrives early waits until `ready`, and is
+**late** only if it arrives after `due`). The windows are **synthetic and
+labelled** — seeded morning `[0, m]` / afternoon `[a, horizon]` / anytime slots —
+in the same spirit as the rest of the repo's data.
+
+Two things are then measured:
+
+1. **A deterministic on-time audit.** The capacity-only Clarke-Wright plan is
+   *time-blind*: it never consulted the clock. `audit_service` replays each route's
+   schedule (depart depot at `t = 0`, add travel, wait to `ready`, add the service
+   time) and counts, per vehicle, how many stops land after their `due` and by how
+   many minutes. Because the savings plan and the arithmetic are both deterministic,
+   `deliverables/service_audit.csv` is byte-for-byte reproducible.
+
+2. **The VRPTW solve.** `solve_vrptw` reuses the same OR-Tools `RoutingModel` as the
+   base solver — identical distance objective and capacity dimension — and adds a
+   **Time** dimension whose transit is `service(from) + travel(from, to)`. Each
+   node's cumulative-time variable is constrained to its `[ready, due]` window, with
+   slack so a van may wait when early. Every window is therefore satisfied by
+   construction; the extra distance over the time-blind plan is the price of that
+   service guarantee. Like any time-limited metaheuristic its distance wobbles a
+   fraction of a percent between runs, so — unlike the audit — the VRPTW number is
+   reported, not pinned.
+
+The honest comparison has two readings. Against the *time-blind savings plan* the
+premium is small (the time-aware optimizer's better routing largely offsets the
+constraint); against the *time-blind OR-Tools optimum* it is larger and is the
+intrinsic cost of the windows, holding the optimizer fixed. Both are reported.
+
 ## Reproducibility
 
 Instances are generated with fixed NumPy seeds (`data/generate_instances.py`), so
