@@ -152,9 +152,44 @@ premium is small (the time-aware optimizer's better routing largely offsets the
 constraint); against the *time-blind OR-Tools optimum* it is larger and is the
 intrinsic cost of the windows, holding the optimizer fixed. Both are reported.
 
+## Robustness under demand uncertainty (the stress test)
+
+`routeopt/robustness.py` asks the question the stochastic-VRP literature asks of
+any a-priori plan: **how does it survive the day it was planned for?** Three
+pieces:
+
+1. **Scenarios.** `sample_demand_scenarios` draws K realized-demand vectors
+   around the forecast: `round(q_i * (1 + cv * z))` with `z` standard normal
+   truncated at ±3σ, clipped to `[0, Q]` (0 = the customer cancelled; the van
+   still drives there, because a-priori routes are fixed). The RNG is seeded from
+   a fixed base plus an instance signature, so the scenario set is byte-for-byte
+   reproducible.
+2. **Recourse.** `simulate_recourse` drives each planned route in order under
+   each scenario. When the next customer's realized demand exceeds what is left
+   in the van, the van makes the classic **detour-to-depot** restocking round
+   trip — extra distance `d(c, depot) + d(depot, c)` — and continues. No
+   re-sequencing or reassignment is modelled: this measures the *plan*, and a
+   dispatcher re-optimizing live would do better. Reported per plan: the share
+   of scenarios with at least one failure, expected restocks, expected / p95 /
+   worst recourse distance, and the expected total (planned + mean recourse).
+3. **The headroom lever.** `plan_with_headroom` re-plans with the vans treated
+   as 5/10/15% smaller (same fleet) and evaluates those plans against the *real*
+   capacity. Slack costs planned kilometres and buys resilience; the sweep is
+   the price-of-robustness curve in `deliverables/robustness.svg`.
+
+Determinism is engineered, not hoped for: Clarke-Wright is deterministic by
+construction, and the OR-Tools plans use a fixed **solution limit** rather than
+a wall-clock limit — the routing search is single-threaded with no time-based
+decisions, so the same instance and limit reproduce the identical routes on
+every run (the test suite asserts this). One honest artifact: neither heuristic
+is monotone in planning capacity, so a buffered plan can occasionally come out
+*shorter* than the unbuffered one.
+
 ## Reproducibility
 
 Instances are generated with fixed NumPy seeds (`data/generate_instances.py`), so
 the committed JSON is byte-for-byte reproducible. OR-Tools' GLS is time-limited,
 so its final distance can wobble by a fraction of a percent between runs and
-machines; the baselines are deterministic.
+machines; the baselines are deterministic. The sensitivity and robustness layers
+avoid the wobble entirely (savings heuristic; fixed solution limit), so their
+committed deliverables regenerate byte-identically.

@@ -3,6 +3,7 @@
     python -m routeopt --instance data/instances/n60.json
     python -m routeopt --instance data/instances/n60.json --compare
     python -m routeopt --instance data/instances/n60.json --time-limit 10 --metric manhattan
+    python -m routeopt --instance data/instances/n60.json --stress
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from pathlib import Path
 from .heuristic import Solution, clarke_wright, nearest_neighbour
 from .model import distance_matrix, load_instance
 from .report import build_deliverables
+from .robustness import build_robustness
 from .sensitivity import build_fleet_sensitivity
 from .solver import solve_cvrp
 from .timewindows import build_service_analysis
@@ -76,6 +78,33 @@ def _run_service(instance, metric: str, time_limit_s: int) -> int:
     return 0
 
 
+def _run_stress(instance, metric: str, n_scenarios: int, cv: float, solution_limit: int) -> int:
+    out = build_robustness(
+        instance, metric=metric, n_scenarios=n_scenarios, cv=cv, solution_limit=solution_limit
+    )
+    print(
+        f"\nrobustness stress test ({n_scenarios} seeded demand scenarios, cv {cv:.2f}; "
+        f"deterministic engines):\n"
+    )
+    print(
+        f"{'engine':>14} {'headroom':>8} {'vans':>4} {'planned':>9} {'maxload':>7} "
+        f"{'fail%':>6} {'restocks':>8} {'extra_km':>8} {'E[total]':>9}"
+    )
+    for r in out["results"]:
+        print(
+            f"{r.engine:>14} {r.headroom_pct:7d}% {r.vehicles:4d} {r.planned_distance:9.1f} "
+            f"{r.max_route_load_pct:6.0f}% {r.fail_scenarios_pct:6.1f} {r.mean_restocks:8.2f} "
+            f"{r.mean_extra_km:8.1f} {r.expected_total_km:9.1f}"
+        )
+    print("\nthe read:")
+    for line in out["read"]:
+        print(f"  {line}")
+    print(f"\nwrote {out['csv']}")
+    print(f"wrote {out['svg']}")
+    print(f"wrote {out['md']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="routeopt", description="CVRP route optimizer (OR-Tools vs savings).")
     ap.add_argument("--instance", required=True, type=Path, help="path to an instance JSON")
@@ -92,6 +121,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="time-window (VRPTW) service-level analysis; audits the time-blind plan and "
         "solves the time-aware one, writes service_audit.csv + service_level.md",
+    )
+    ap.add_argument(
+        "--stress",
+        action="store_true",
+        help="robustness stress test under demand uncertainty (deterministic); drives each "
+        "plan through seeded demand scenarios with detour-to-depot recourse and sweeps "
+        "capacity headroom, writes robustness.csv + robustness.svg + robustness.md",
+    )
+    ap.add_argument("--scenarios", type=int, default=200, help="stress test: number of seeded demand scenarios")
+    ap.add_argument("--demand-cv", type=float, default=0.15, help="stress test: demand noise level (coefficient of variation)")
+    ap.add_argument(
+        "--solution-limit",
+        type=int,
+        default=200,
+        help="stress test: OR-Tools deterministic stopping rule (solutions, not seconds)",
     )
     ap.add_argument("--no-deliverables", action="store_true", help="skip writing CSV/PNG/summary")
     args = ap.parse_args(argv)
@@ -110,6 +154,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.service:
         return _run_service(instance, args.metric, args.time_limit)
+
+    if args.stress:
+        return _run_stress(instance, args.metric, args.scenarios, args.demand_cv, args.solution_limit)
 
     ort = solve_cvrp(instance, metric=args.metric, time_limit_s=args.time_limit)
 

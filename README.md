@@ -93,6 +93,39 @@ labelled**; the VRPTW distance comes from a time-limited metaheuristic, so it
 wobbles a fraction of a percent between runs, while the on-time audit of the
 deterministic savings plan does not.
 
+## Robustness under demand uncertainty (stress test)
+
+Every number above is optimal *for the forecast*. On the day, the quantity at
+the door differs — and a van planned to 100% of capacity has no slack to absorb
+it. So there is a fourth layer that stress-tests the plans the standard
+stochastic-VRP way: drive each plan, in planned order, through **200 seeded
+demand scenarios** (±15% multiplicative noise — a labelled assumption), and when
+a van can't serve the next customer it makes the classic **detour-to-depot
+restocking trip**. Both engines are pinned deterministic for this (Clarke-Wright
+by construction, OR-Tools by a fixed solution limit instead of a wall clock), so
+every number regenerates byte-identically.
+
+![Robustness vs capacity headroom for the 60-customer instance](deliverables/robustness.svg)
+
+The honest findings on `n60` (`deliverables/robustness.csv`):
+
+- **Both zero-buffer plans are fragile**: packed to 100% max route load, they hit
+  at least one capacity failure in **~96% of scenarios**. The optimized plan is
+  *not* more fragile than the baseline here — it fails as often but recovers
+  cheaper (**117 vs 178 km** expected recourse/day), so it stays ahead under
+  noise: **1,119 vs 1,225 km** expected total.
+- **A small buffer pays for itself.** Re-planning with just **5% capacity
+  headroom** costs **+3.0% planned km** but cuts failing scenarios **96% → 44%**
+  and the *expected* day by **4.6%** (1,067 km) — the recourse saved outweighs
+  the planned km added, the classic flaw-of-averages result.
+- **Deep buffers buy near-certainty, not economy**: at 15% headroom the failure
+  rate is ~1%, for +13.4% planned km. Where on that curve to sit is a business
+  choice; the table prices it.
+
+Full table and write-up: `deliverables/robustness.md`. The noise level is
+**modelled, not measured** — synthetic customers have no order history — and the
+recourse is the textbook policy; a dispatcher re-planning live would do better.
+
 ## Run it
 
 ```bash
@@ -101,8 +134,9 @@ python data/generate_instances.py                              # seeded instance
 python -m routeopt --instance data/instances/n60.json --compare   # print all three methods + the gap
 python -m routeopt --instance data/instances/n60.json --sweep-fleet  # fleet-size sensitivity (CSV+SVG+MD)
 python -m routeopt --instance data/instances/n60.json --service   # time-window (VRPTW) service-level analysis
+python -m routeopt --instance data/instances/n60.json --stress    # demand-uncertainty stress test (CSV+SVG+MD)
 python web/build_data.py --instance data/instances/n60.json    # web/data.js -> open web/index.html offline
-pytest -q                                                      # 26 tests, ~25s
+pytest -q                                                      # 36 tests, ~30s
 ```
 
 `python -m routeopt --instance ...` also writes the deliverables:
@@ -129,6 +163,8 @@ guided local search) — is written out in [`docs/METHOD.md`](docs/METHOD.md).
 - `routeopt/sensitivity.py` — the fleet-size / cost / service / CO2 what-if sweep.
 - `routeopt/timewindows.py` — time windows (VRPTW) on the OR-Tools engine plus the
   deterministic on-time / service-level audit of the time-blind plan.
+- `routeopt/robustness.py` — the demand-uncertainty stress test: seeded scenarios,
+  detour-to-depot recourse simulation, and the capacity-headroom sweep.
 
 ## Limitations
 
@@ -147,6 +183,13 @@ I would rather state these than oversell:
   constraints, and OR-Tools supports all of them.
 - **GLS is time-limited, so its final number wobbles** a fraction of a percent between
   runs. The baselines are deterministic; the headline gap is stable to within noise.
+  (The robustness layer avoids this by pinning OR-Tools to a fixed *solution limit*
+  instead — deterministic, at a small cost in solution quality.)
+- **The stress test measures the plan, not the dispatcher.** Scenarios are drawn from
+  an assumed ±15% demand noise (synthetic customers have no order history), and the
+  recourse is the textbook detour-to-depot policy with no live re-optimization. The
+  failure rates and recourse kilometres are modelled, not measured, and scale with
+  the assumed noise.
 
 ## License
 

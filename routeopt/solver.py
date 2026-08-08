@@ -4,6 +4,15 @@ Builds a `RoutingModel` with two dimensions — travelled distance and vehicle
 load — solves with PATH_CHEAPEST_ARC for the first solution and guided local
 search as the metaheuristic, under a wall-clock time limit, and returns the
 routes in the same :class:`~routeopt.heuristic.Solution` shape as the baselines.
+
+Two stopping modes:
+
+* ``time_limit_s`` (default) — wall-clock. Best quality per second, but the
+  final distance wobbles a fraction of a percent between runs and machines.
+* ``solution_limit`` — stop after a fixed number of solutions instead. The
+  search is single-threaded and contains no time-based decisions, so the same
+  instance + limit gives the **identical routes on every run** — this is the
+  mode the robustness stress test pins its deliverables on.
 """
 
 from __future__ import annotations
@@ -25,6 +34,7 @@ def solve_cvrp(
     metric: str = "euclidean",
     time_limit_s: int = 5,
     log: bool = False,
+    solution_limit: int | None = None,
 ) -> Solution:
     dist = distance_matrix(instance, metric)
     idist = scaled_int_matrix(dist, _SCALE)
@@ -65,7 +75,12 @@ def solve_cvrp(
     params.local_search_metaheuristic = (
         routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     )
-    params.time_limit.FromSeconds(int(time_limit_s))
+    if solution_limit is not None:
+        # Deterministic mode: a fixed solution count, no wall-clock anywhere in
+        # the search, so the result is identical run-to-run (see module docstring).
+        params.solution_limit = int(solution_limit)
+    else:
+        params.time_limit.FromSeconds(int(time_limit_s))
     params.log_search = bool(log)
 
     t0 = time.perf_counter()
