@@ -4,6 +4,7 @@
     python -m routeopt --instance data/instances/n60.json --compare
     python -m routeopt --instance data/instances/n60.json --time-limit 10 --metric manhattan
     python -m routeopt --instance data/instances/n60.json --stress
+    python -m routeopt --instance data/instances/n60.json --mix
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .fleetmix import build_fleet_mix
 from .heuristic import Solution, clarke_wright, nearest_neighbour
 from .model import distance_matrix, load_instance
 from .report import build_deliverables
@@ -105,6 +107,37 @@ def _run_stress(instance, metric: str, n_scenarios: int, cv: float, solution_lim
     return 0
 
 
+def _run_mix(instance, metric: str, solution_limit: int) -> int:
+    out = build_fleet_mix(instance, metric=metric, solution_limit=solution_limit)
+    print(
+        f"\nheterogeneous fleet mix (FSM; money objective, deterministic "
+        f"solution limit {solution_limit}):\n"
+    )
+    print("catalogue (illustrative costs, not certified):")
+    for t in out["types"]:
+        print(
+            f"  {t.name:>7}: capacity {t.capacity:3d}, EUR {t.fixed_cost_eur:5.0f}/day fixed, "
+            f"EUR {t.var_cost_eur_km:.2f}/km, {t.co2_g_km:.0f} g/km"
+        )
+    print(
+        f"\n{'option':>14} {'fleet':>24} {'vans':>4} {'distance':>9} {'longest':>8} "
+        f"{'fixed':>7} {'var':>7} {'total_EUR':>9} {'CO2_kg':>7}"
+    )
+    for p in out["plans"]:
+        print(
+            f"{p.label:>14} {p.fleet_str:>24} {p.vehicles:4d} {p.total_distance:9.1f} "
+            f"{p.longest_route:8.1f} {p.fixed_cost_eur:7.0f} {p.var_cost_eur:7.0f} "
+            f"{p.total_cost_eur:9.0f} {p.est_co2_kg:7.1f}"
+        )
+    print("\nthe read:")
+    for line in out["read"]:
+        print(f"  {line}")
+    print(f"\nwrote {out['csv']}")
+    print(f"wrote {out['svg']}")
+    print(f"wrote {out['md']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="routeopt", description="CVRP route optimizer (OR-Tools vs savings).")
     ap.add_argument("--instance", required=True, type=Path, help="path to an instance JSON")
@@ -129,13 +162,20 @@ def main(argv: list[str] | None = None) -> int:
         "plan through seeded demand scenarios with detour-to-depot recourse and sweeps "
         "capacity headroom, writes robustness.csv + robustness.svg + robustness.md",
     )
+    ap.add_argument(
+        "--mix",
+        action="store_true",
+        help="heterogeneous fleet mix (FSM, deterministic): prices the optimizer's mixed "
+        "fleet against every homogeneous option (fixed + per-km costs per van type), "
+        "writes fleet_mix.csv + fleet_mix.svg + fleet_mix.md",
+    )
     ap.add_argument("--scenarios", type=int, default=200, help="stress test: number of seeded demand scenarios")
     ap.add_argument("--demand-cv", type=float, default=0.15, help="stress test: demand noise level (coefficient of variation)")
     ap.add_argument(
         "--solution-limit",
         type=int,
         default=200,
-        help="stress test: OR-Tools deterministic stopping rule (solutions, not seconds)",
+        help="stress test / fleet mix: OR-Tools deterministic stopping rule (solutions, not seconds)",
     )
     ap.add_argument("--no-deliverables", action="store_true", help="skip writing CSV/PNG/summary")
     args = ap.parse_args(argv)
@@ -157,6 +197,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.stress:
         return _run_stress(instance, args.metric, args.scenarios, args.demand_cv, args.solution_limit)
+
+    if args.mix:
+        return _run_mix(instance, args.metric, args.solution_limit)
 
     ort = solve_cvrp(instance, metric=args.metric, time_limit_s=args.time_limit)
 

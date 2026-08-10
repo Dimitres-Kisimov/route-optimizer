@@ -1,0 +1,5 @@
+option,fleet,vehicles,total_distance_km,longest_route_km,fixed_cost_eur,var_cost_eur,total_cost_eur,est_co2_kg
+optimized mix,5 large,5,648.475,177.208,450.00,875.44,1325.44,214.00
+all-small,19 small,19,1798.043,139.630,760.00,1258.63,2018.63,323.65
+all-medium,10 medium,10,1006.415,141.504,600.00,1006.41,1606.41,251.60
+all-large,5 large,5,648.475,177.208,450.00,875.44,1325.44,214.00

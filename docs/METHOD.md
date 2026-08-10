@@ -185,11 +185,56 @@ every run (the test suite asserts this). One honest artifact: neither heuristic
 is monotone in planning capacity, so a buffered plan can occasionally come out
 *shorter* than the unbuffered one.
 
+## Heterogeneous fleet mix — the Fleet Size and Mix VRP
+
+`routeopt/fleetmix.py` drops the one assumption every other layer keeps: that
+all vans are the same. The **Fleet Size and Mix VRP** (Golden, Assad, Levy &
+Gheysens, 1984) asks which *combination* of vehicle types serves the demand at
+the lowest total cost, where each type has its own capacity, fixed deployment
+cost, and per-kilometre rate.
+
+The model is the base CVRP `RoutingModel` with three heterogeneous extensions:
+
+- **A typed pool.** For each catalogue type, `ceil(total_demand / capacity) + 2`
+  candidate vans are created — enough that any single type could serve the whole
+  demand alone, with slack so routing does not degenerate into tight bin
+  packing. The capacity dimension takes one capacity *per pool van*.
+- **Money as the objective.** Each van pays its type's EUR/km through a
+  per-vehicle arc-cost evaluator (`SetArcCostEvaluatorOfVehicle`; integer cents,
+  since OR-Tools objectives are integral), plus its type's fixed cost
+  (`SetFixedCostOfVehicle`), charged only if the van actually leaves the depot.
+  Minimising that objective *is* choosing the mix: a pool van that does not earn
+  its fixed cost stays parked.
+- **A like-for-like comparison.** The mixed-pool solve is scored against each
+  homogeneous option ("all-small", "all-medium", "all-large") under the
+  identical cost model. A homogeneous option whose van cannot carry the largest
+  single order is infeasible by construction and dropped.
+
+The default catalogue anchors on the instance's own van: `medium` *is* that van
+(with the repo's illustrative EUR 1.00/km and 250 g/km), `small` carries half at
+EUR 0.70/km and EUR 40/day fixed, `large` carries double at EUR 1.35/km and
+EUR 90/day fixed. Both cost axes rise with size but *fall per unit of capacity*
+— the economies of scale that make the mix a genuine optimisation question
+rather than an arithmetic one. All figures are labelled estimates, not
+certified rates.
+
+Every reported number (distance, fixed / variable / total EUR, CO2, longest
+route) is recomputed in floats from the extracted routes and the catalogue — the
+integer objective only *guides* the search — so the deliverables are exact
+functions of the routes and the test suite recomputes them by hand. The layer
+always runs under a fixed **solution limit**, never a wall clock, so
+`deliverables/fleet_mix.{csv,svg,md}` regenerate byte-identically. Two honest
+notes: the plans are heuristic solutions under a fixed budget, not proven
+optima — and because the mixed pool has a much larger search space, the mixed
+solve can trail a homogeneous one under the same budget (the deliverable
+reports whatever falls). No route-duration cap is modelled; the longest-route
+column is the service price of consolidating into fewer, bigger vans.
+
 ## Reproducibility
 
 Instances are generated with fixed NumPy seeds (`data/generate_instances.py`), so
 the committed JSON is byte-for-byte reproducible. OR-Tools' GLS is time-limited,
 so its final distance can wobble by a fraction of a percent between runs and
-machines; the baselines are deterministic. The sensitivity and robustness layers
-avoid the wobble entirely (savings heuristic; fixed solution limit), so their
-committed deliverables regenerate byte-identically.
+machines; the baselines are deterministic. The sensitivity, robustness and
+fleet-mix layers avoid the wobble entirely (savings heuristic; fixed solution
+limits), so their committed deliverables regenerate byte-identically.
