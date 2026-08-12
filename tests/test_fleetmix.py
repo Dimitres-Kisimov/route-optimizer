@@ -175,6 +175,9 @@ def test_build_writes_files_and_regenerates_byte_identically(n30, tmp_path):
     md_text = (tmp_path / "a" / "fleet_mix.md").read_text(encoding="utf-8")
     assert "not certified" in md_text
     assert "Golden" in md_text  # the FSM lineage is named
+    svg_text = (tmp_path / "a" / "fleet_mix.svg").read_text()
+    assert "PLATE 04" in svg_text  # numbered plate on the dispatch board
+    assert "not certified" in svg_text  # the honesty line stays on the plate
     build_fleet_mix(n30, out_dir=tmp_path / "b", **kwargs)
     for name in ("fleet_mix.csv", "fleet_mix.svg", "fleet_mix.md"):
         assert (tmp_path / "a" / name).read_bytes() == (tmp_path / "b" / name).read_bytes(), (

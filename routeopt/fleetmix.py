@@ -44,6 +44,7 @@ from pathlib import Path
 import numpy as np
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
+from . import plate
 from .model import Instance, distance_matrix, route_load, scaled_int_matrix
 from .sensitivity import CO2_G_PER_KM, COST_EUR_PER_KM, _nice_ceiling
 
@@ -401,107 +402,86 @@ def write_mix_svg(
     title: str = "Fleet mix — cost of each option",
     solution_limit: int = SOLUTION_LIMIT,
 ) -> Path:
-    """Hand-drawn SVG (no plotting library): stacked cost bars per fleet option.
+    """Plate 04 — the fleet options as two stacked panels (one axis each).
 
-    Each option is a bar of fixed (sky) + variable (blue) EUR/day, with the
-    total labelled on top and CO2 as an orange dot on the right axis. Every
-    coordinate is rounded, so the file is byte-for-byte identical across runs.
+    Panel A (EUR/day): a stacked money bar per option — fixed cost as the
+    light step of the blue ramp under variable cost in full blue, a 2px
+    surface gap between segments, total labelled on top. Panel B (kg/day):
+    estimated CO2 per option, direct-labelled. Both share the option axis —
+    no dual-axis chart. Every coordinate is rounded, so the file is
+    byte-for-byte identical across runs.
     """
-    w, h = 760, 460
-    ml, mr, mt, mb = 64, 66, 56, 64
-    px0, px1 = ml, w - mr
-    py0, py1 = h - mb, mt
+    w, h = plate.PLATE_W, 640
+    px0, px1 = plate.MARGIN_L, w - plate.MARGIN_R
 
     emax = _nice_ceiling(max(p.total_cost_eur for p in plans))
     cmax = _nice_ceiling(max(p.est_co2_kg for p in plans))
     n = len(plans)
     slot = (px1 - px0) / n
-    bar_w = round(min(84.0, slot * 0.52), 2)
 
     def sx(i: int) -> float:
         return round(px0 + (i + 0.5) * slot, 2)
 
-    def sy_e(v: float) -> float:
-        return round(py0 + (v / emax) * (py1 - py0), 2)
+    def sy(v: float, vcap: float, py0: float, py1: float) -> float:
+        return round(py0 + (v / vcap) * (py1 - py0), 2)
 
-    def sy_c(v: float) -> float:
-        return round(py0 + (v / cmax) * (py1 - py0), 2)
-
-    blue, sky, orange, ink, grid = "#0072B2", "#56B4E9", "#D55E00", "#222222", "#DDDDDD"
-    out: list[str] = []
-    out.append(
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" '
-        f'viewBox="0 0 {w} {h}" font-family="system-ui,Segoe UI,Arial,sans-serif">'
-    )
-    out.append(f'<rect width="{w}" height="{h}" fill="#FFFFFF"/>')
-    out.append(
-        f'<text x="{ml}" y="30" font-size="17" font-weight="600" fill="{ink}">{title}</text>'
-    )
-    out.append(
-        f'<text x="{ml}" y="47" font-size="11" fill="#666666">'
+    out = plate.open_svg(w, h)
+    plate.plate_header(
+        out, "04", title,
         f"or-tools, deterministic solution limit {solution_limit}; catalogue costs are "
-        f"illustrative estimates, not certified</text>"
+        f"illustrative estimates, not certified",
     )
 
-    for i in range(5):
-        gy = round(py0 + i / 4 * (py1 - py0), 2)
-        out.append(f'<line x1="{px0}" y1="{gy}" x2="{px1}" y2="{gy}" stroke="{grid}" stroke-width="1"/>')
-        out.append(
-            f'<text x="{px0 - 8}" y="{gy + 4}" font-size="11" text-anchor="end" '
-            f'fill="{blue}">{emax * i / 4:.0f}</text>'
-        )
-        out.append(
-            f'<text x="{px1 + 8}" y="{gy + 4}" font-size="11" text-anchor="start" '
-            f'fill="{orange}">{cmax * i / 4:.0f}</text>'
-        )
-
-    out.append(
-        f'<text x="{(px0 + px1) / 2}" y="{h - 12}" font-size="12" text-anchor="middle" '
-        f'fill="{ink}">fleet option</text>'
-    )
-    out.append(
-        f'<text x="16" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" fill="{blue}" '
-        f'transform="rotate(-90 16 {(py0 + py1) / 2})">cost (EUR/day)</text>'
-    )
-    out.append(
-        f'<text x="{w - 14}" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" '
-        f'fill="{orange}" transform="rotate(90 {w - 14} {(py0 + py1) / 2})">'
-        f"est. CO2 (kg/day)</text>"
-    )
-
+    # --- panel A: the money stack --------------------------------------------
+    a_py1, a_py0 = 130, 330
+    plate.panel_title(out, px0, a_py1 - 18, "Cost (EUR/day) — fixed + variable, total labelled")
+    plate.h_grid(out, px0, px1, a_py0, a_py1, emax, ticks=6)
+    bar_w = round(min(56.0, slot * 0.4), 2)
     for i, p in enumerate(plans):
         x = sx(i)
-        x0 = round(x - bar_w / 2, 2)
-        y_fix = sy_e(p.fixed_cost_eur)
-        y_tot = sy_e(p.total_cost_eur)
-        out.append(
-            f'<rect x="{x0}" y="{y_fix}" width="{bar_w}" height="{round(py0 - y_fix, 2)}" fill="{sky}"/>'
+        plate.stacked_bar(
+            out, x, bar_w, a_py0,
+            sy(p.fixed_cost_eur, emax, a_py0, a_py1),
+            sy(p.total_cost_eur, emax, a_py0, a_py1),
         )
         out.append(
-            f'<rect x="{x0}" y="{y_tot}" width="{bar_w}" height="{round(y_fix - y_tot, 2)}" fill="{blue}"/>'
+            f'<text x="{x}" y="{round(sy(p.total_cost_eur, emax, a_py0, a_py1) - 7, 2)}" '
+            f'font-size="11" font-weight="600" text-anchor="middle" '
+            f'fill="{plate.INK}">{p.total_cost_eur:,.0f}</text>'
         )
         out.append(
-            f'<text x="{x}" y="{round(y_tot - 7, 2)}" font-size="11" text-anchor="middle" '
-            f'fill="{ink}">{p.total_cost_eur:,.0f}</text>'
-        )
-        out.append(f'<circle cx="{x}" cy="{sy_c(p.est_co2_kg)}" r="4" fill="{orange}"/>')
-        out.append(
-            f'<text x="{x}" y="{py0 + 17}" font-size="11" text-anchor="middle" fill="{ink}">'
-            f"{p.label}</text>"
+            f'<text x="{x}" y="{a_py0 + 16}" font-size="10.5" text-anchor="middle" '
+            f'fill="{plate.INK}">{p.label}</text>'
         )
         out.append(
-            f'<text x="{x}" y="{py0 + 31}" font-size="10" text-anchor="middle" fill="#666666">'
-            f"{p.fleet_str}</text>"
+            f'<text x="{x}" y="{a_py0 + 29}" font-size="9.5" text-anchor="middle" '
+            f'fill="{plate.MUTED}">{p.fleet_str}</text>'
+        )
+    plate.legend_swatch(out, px0 + 6, a_py1 + 10, plate.BLUE_LIGHT, "fixed cost (deployed vans)")
+    plate.legend_swatch(out, px0 + 196, a_py1 + 10, plate.BLUE, "variable cost (km driven)")
+
+    # --- panel B: emissions ---------------------------------------------------
+    b_py1, b_py0 = 410, 560
+    plate.panel_title(out, px0, b_py1 - 18, "Est. CO2 (kg/day) — illustrative factors per van type")
+    plate.h_grid(out, px0, px1, b_py0, b_py1, cmax, ticks=6)
+    co2_w = round(min(30.0, slot * 0.22), 2)
+    for i, p in enumerate(plans):
+        x = sx(i)
+        y_top = sy(p.est_co2_kg, cmax, b_py0, b_py1)
+        plate.bar(out, x, co2_w, b_py0, y_top, plate.AQUA)
+        plate.direct_label(out, x, round(y_top - 7, 2), f"{p.est_co2_kg:,.0f}", anchor="middle")
+        out.append(
+            f'<text x="{x}" y="{b_py0 + 16}" font-size="9.5" text-anchor="middle" '
+            f'fill="{plate.MUTED}">{p.label}</text>'
         )
 
-    lx, ly = px0 + 12, py1 + 14
-    out.append(f'<rect x="{lx}" y="{ly - 8}" width="14" height="10" fill="{sky}"/>')
-    out.append(f'<text x="{lx + 20}" y="{ly + 1}" font-size="11" fill="{ink}">fixed cost (deployed vans)</text>')
-    out.append(f'<rect x="{lx}" y="{ly + 10}" width="14" height="10" fill="{blue}"/>')
-    out.append(f'<text x="{lx + 20}" y="{ly + 19}" font-size="11" fill="{ink}">variable cost (km driven)</text>')
-    out.append(f'<circle cx="{lx + 7}" cy="{ly + 32}" r="4" fill="{orange}"/>')
-    out.append(f'<text x="{lx + 20}" y="{ly + 36}" font-size="11" fill="{ink}">est. CO2 (right axis)</text>')
-    out.append("</svg>")
+    plate.x_axis_label(out, px0, px1, 600, "fleet option (same options in both panels)")
+    plate.footer(
+        out, w, h,
+        "Money and emissions on separate axes, shared option order. Fixed solution limit — "
+        "regenerates byte-identically. Table: fleet_mix.csv / .md",
+    )
+    plate.close_svg(out)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(out) + "\n", encoding="utf-8")

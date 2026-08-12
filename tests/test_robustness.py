@@ -128,6 +128,9 @@ def test_build_writes_files_and_regenerates_byte_identically(n30, tmp_path):
     assert csv_text.startswith("engine,headroom_pct,vehicles,planned_km,")
     md_text = (tmp_path / "a" / "robustness.md").read_text()
     assert "not measured" in md_text
+    svg_text = (tmp_path / "a" / "robustness.svg").read_text()
+    assert "PLATE 03" in svg_text  # numbered plate on the dispatch board
+    assert "not measured" in svg_text  # the honesty line stays on the plate
     build_robustness(n30, out_dir=tmp_path / "b", **kwargs)
     for name in ("robustness.csv", "robustness.svg", "robustness.md"):
         assert (tmp_path / "a" / name).read_bytes() == (tmp_path / "b" / name).read_bytes(), (

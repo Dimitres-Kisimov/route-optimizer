@@ -27,6 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from . import plate
 from .heuristic import clarke_wright
 from .model import Instance, distance_matrix, route_distance
 
@@ -202,109 +203,62 @@ def _nice_ceiling(value: float) -> float:
 def write_sensitivity_svg(
     frontier: list[FleetPoint], path: Path, title: str = "Fleet-size sensitivity"
 ) -> Path:
-    """A hand-drawn (no plotting library) SVG of the trade-off frontier.
+    """Plate 02 — the trade-off frontier as two stacked panels (one axis each).
 
-    Left axis / blue: total distance (cost). Right axis / orange: longest route
-    (service). X: vehicles used. Every coordinate is rounded, so the file is
-    byte-for-byte identical across re-runs.
+    Panel A: total distance (km), the cost axis. Panel B: longest single route
+    (km), the service proxy. Both share the fleet-size x axis — no dual-axis
+    chart. Hand-drawn SVG on the shared plate system; every coordinate is
+    rounded, so the file is byte-for-byte identical across re-runs.
     """
-    w, h = 760, 460
-    ml, mr, mt, mb = 64, 66, 56, 64  # margins
-    px0, px1 = ml, w - mr
-    py0, py1 = h - mb, mt
+    w, h = plate.PLATE_W, 640
+    px0, px1 = plate.MARGIN_L, w - plate.MARGIN_R
 
     vs = [p.vehicles for p in frontier]
-    dists = [p.total_distance for p in frontier]
-    longs = [p.longest_route for p in frontier]
     vmin, vmax = min(vs), max(vs)
-    dmax = _nice_ceiling(max(dists))
-    lmax = _nice_ceiling(max(longs))
     vspan = (vmax - vmin) or 1
+    dmax = _nice_ceiling(max(p.total_distance for p in frontier))
+    lmax = _nice_ceiling(max(p.longest_route for p in frontier))
 
     def sx(v: float) -> float:
         return round(px0 + (v - vmin) / vspan * (px1 - px0), 2)
 
-    def sy_d(d: float) -> float:
-        return round(py0 + (d / dmax) * (py1 - py0), 2)
+    def sy(v: float, vcap: float, py0: float, py1: float) -> float:
+        return round(py0 + (v / vcap) * (py1 - py0), 2)
 
-    def sy_l(length: float) -> float:
-        return round(py0 + (length / lmax) * (py1 - py0), 2)
-
-    blue, orange, ink, grid = "#0072B2", "#D55E00", "#222222", "#DDDDDD"
-    out: list[str] = []
-    out.append(
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" '
-        f'viewBox="0 0 {w} {h}" font-family="system-ui,Segoe UI,Arial,sans-serif">'
-    )
-    out.append(f'<rect width="{w}" height="{h}" fill="#FFFFFF"/>')
-    out.append(
-        f'<text x="{ml}" y="30" font-size="17" font-weight="600" fill="{ink}">{title}</text>'
-    )
-    out.append(
-        f'<text x="{ml}" y="47" font-size="11" fill="#666666">'
+    out = plate.open_svg(w, h)
+    plate.plate_header(
+        out, "02", title,
         f"Clarke-Wright savings; CO2 {CO2_G_PER_KM:.0f} g/km &amp; cost EUR "
-        f"{COST_EUR_PER_KM:.2f}/km are illustrative estimates</text>"
+        f"{COST_EUR_PER_KM:.2f}/km are illustrative estimates",
     )
 
-    # horizontal gridlines + left (distance) axis ticks
-    for i in range(5):
-        gy = round(py0 + i / 4 * (py1 - py0), 2)
-        out.append(f'<line x1="{px0}" y1="{gy}" x2="{px1}" y2="{gy}" stroke="{grid}" stroke-width="1"/>')
-        out.append(
-            f'<text x="{px0 - 8}" y="{gy + 4}" font-size="11" text-anchor="end" '
-            f'fill="{blue}">{dmax * i / 4:.0f}</text>'
-        )
-        out.append(
-            f'<text x="{px1 + 8}" y="{gy + 4}" font-size="11" text-anchor="start" '
-            f'fill="{orange}">{lmax * i / 4:.0f}</text>'
-        )
-
-    # x ticks (one per vehicle count actually present)
-    for p in frontier:
-        x = sx(p.vehicles)
-        out.append(f'<line x1="{x}" y1="{py0}" x2="{x}" y2="{py0 + 5}" stroke="{ink}" stroke-width="1"/>')
-        out.append(
-            f'<text x="{x}" y="{py0 + 19}" font-size="11" text-anchor="middle" fill="{ink}">'
-            f"{p.vehicles}</text>"
-        )
-
-    # axis labels
-    out.append(
-        f'<text x="{(px0 + px1) / 2}" y="{h - 16}" font-size="12" text-anchor="middle" '
-        f'fill="{ink}">vehicles used (fleet size)</text>'
+    panels = (
+        ("Total distance (km) — the cost axis, and the CO2/cost line with it",
+         dmax, plate.BLUE, [(p.vehicles, p.total_distance) for p in frontier], 130, 306),
+        ("Longest single route (km) — the service proxy: time to the last customer",
+         lmax, plate.ORANGE, [(p.vehicles, p.longest_route) for p in frontier], 386, 562),
     )
-    out.append(
-        f'<text x="16" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" fill="{blue}" '
-        f'transform="rotate(-90 16 {(py0 + py1) / 2})">total distance (km) &#183; cost/CO2</text>'
-    )
-    out.append(
-        f'<text x="{w - 14}" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" '
-        f'fill="{orange}" transform="rotate(90 {w - 14} {(py0 + py1) / 2})">'
-        f"longest route (km) &#183; service</text>"
-    )
+    for ptitle, vcap, colour, series, py1, py0 in panels:
+        plate.panel_title(out, px0, py1 - 18, ptitle)
+        plate.h_grid(out, px0, px1, py0, py1, vcap)
+        for v, _ in series:
+            plate.x_tick(out, sx(v), py0, f"{v}")
+        pts = [(sx(v), sy(val, vcap, py0, py1)) for v, val in series]
+        plate.series_line(out, pts, colour)
+        # selective direct labels: first and last point of each panel
+        for (x, y), (_, val), anchor in (
+            (pts[0], series[0], "start"),
+            (pts[-1], series[-1], "end"),
+        ):
+            plate.direct_label(out, x, round(y - 9, 2), f"{val:,.0f}", anchor=anchor)
 
-    # service line (orange, right axis)
-    pts_l = " ".join(f"{sx(p.vehicles)},{sy_l(p.longest_route)}" for p in frontier)
-    out.append(f'<polyline points="{pts_l}" fill="none" stroke="{orange}" stroke-width="2" stroke-dasharray="5 4"/>')
-    for p in frontier:
-        out.append(f'<circle cx="{sx(p.vehicles)}" cy="{sy_l(p.longest_route)}" r="3" fill="{orange}"/>')
-
-    # distance line (blue, left axis) on top
-    pts_d = " ".join(f"{sx(p.vehicles)},{sy_d(p.total_distance)}" for p in frontier)
-    out.append(f'<polyline points="{pts_d}" fill="none" stroke="{blue}" stroke-width="2.5"/>')
-    for p in frontier:
-        out.append(f'<circle cx="{sx(p.vehicles)}" cy="{sy_d(p.total_distance)}" r="3.5" fill="{blue}"/>')
-
-    # legend
-    lx, ly = px0 + 12, py1 + 14
-    out.append(f'<line x1="{lx}" y1="{ly}" x2="{lx + 26}" y2="{ly}" stroke="{blue}" stroke-width="2.5"/>')
-    out.append(f'<text x="{lx + 32}" y="{ly + 4}" font-size="11" fill="{ink}">total distance (cost / CO2)</text>')
-    out.append(
-        f'<line x1="{lx}" y1="{ly + 18}" x2="{lx + 26}" y2="{ly + 18}" stroke="{orange}" '
-        f'stroke-width="2" stroke-dasharray="5 4"/>'
+    plate.x_axis_label(out, px0, px1, 600, "vehicles used (fleet size)")
+    plate.footer(
+        out, w, h,
+        "One measure per panel, shared fleet-size axis. Deterministic savings sweep — "
+        "the file regenerates byte-identically. Table: fleet_sensitivity.csv / .md",
     )
-    out.append(f'<text x="{lx + 32}" y="{ly + 22}" font-size="11" fill="{ink}">longest route (service)</text>')
-    out.append("</svg>")
+    plate.close_svg(out)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(out) + "\n", encoding="utf-8")

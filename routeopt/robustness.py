@@ -38,6 +38,7 @@ from pathlib import Path
 
 import numpy as np
 
+from . import plate
 from .heuristic import Solution, clarke_wright
 from .model import Instance, distance_matrix
 from .sensitivity import _nice_ceiling
@@ -291,114 +292,90 @@ def write_robustness_svg(
     cv: float = DEMAND_CV,
     n_scenarios: int = N_SCENARIOS,
 ) -> Path:
-    """Hand-drawn SVG (no plotting library): the price-of-robustness curve.
+    """Plate 03 — the price-of-robustness curve as two stacked panels.
 
-    X: capacity headroom the or-tools plan was built with. Left axis: planned
-    distance (blue) and expected total incl. recourse (green). Right axis:
-    share of scenarios with at least one restock (orange, dashed). Every
-    coordinate is rounded, so the file is byte-for-byte identical across runs.
+    Panel A (km, one axis): the planned forecast-world distance as a quiet gray
+    reference under the inked expected day incl. recourse — emphasis, not two
+    rainbows. Panel B (%): the share of scenarios with at least one restock.
+    Both share the headroom x axis. Every coordinate is rounded, so the file is
+    byte-for-byte identical across runs.
     """
     rows = sorted((r for r in results if r.engine == "or-tools"), key=lambda r: r.headroom_pct)
     if not rows:
         rows = sorted(
             (r for r in results if r.engine == "clarke-wright"), key=lambda r: r.headroom_pct
         )
-    w, h = 760, 460
-    ml, mr, mt, mb = 64, 66, 56, 64
-    px0, px1 = ml, w - mr
-    py0, py1 = h - mb, mt
+    w, h = plate.PLATE_W, 640
+    px0, px1 = plate.MARGIN_L, w - plate.MARGIN_R
 
     xs_v = [r.headroom_pct for r in rows]
-    kms = [r.planned_distance for r in rows] + [r.expected_total_km for r in rows]
-    kmax = _nice_ceiling(max(kms))
     xmin, xmax = min(xs_v), max(xs_v)
     xspan = (xmax - xmin) or 1
+    kmax = _nice_ceiling(
+        max([r.planned_distance for r in rows] + [r.expected_total_km for r in rows])
+    )
 
     def sx(v: float) -> float:
         return round(px0 + (v - xmin) / xspan * (px1 - px0), 2)
 
-    def sy_km(v: float) -> float:
-        return round(py0 + (v / kmax) * (py1 - py0), 2)
+    def sy(v: float, vcap: float, py0: float, py1: float) -> float:
+        return round(py0 + (v / vcap) * (py1 - py0), 2)
 
-    def sy_pc(v: float) -> float:
-        return round(py0 + (v / 100.0) * (py1 - py0), 2)
-
-    blue, green, orange, ink, grid = "#0072B2", "#009E73", "#D55E00", "#222222", "#DDDDDD"
-    out: list[str] = []
-    out.append(
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" '
-        f'viewBox="0 0 {w} {h}" font-family="system-ui,Segoe UI,Arial,sans-serif">'
-    )
-    out.append(f'<rect width="{w}" height="{h}" fill="#FFFFFF"/>')
-    out.append(
-        f'<text x="{ml}" y="30" font-size="17" font-weight="600" fill="{ink}">{title}</text>'
-    )
-    out.append(
-        f'<text x="{ml}" y="47" font-size="11" fill="#666666">'
+    out = plate.open_svg(w, h)
+    plate.plate_header(
+        out, "03", title,
         f"or-tools (deterministic solution limit); {n_scenarios} seeded demand scenarios, "
-        f"cv {cv:.2f} — modelled noise, not measured</text>"
+        f"cv {cv:.2f} — modelled noise, not measured",
     )
 
-    for i in range(5):
-        gy = round(py0 + i / 4 * (py1 - py0), 2)
-        out.append(f'<line x1="{px0}" y1="{gy}" x2="{px1}" y2="{gy}" stroke="{grid}" stroke-width="1"/>')
-        out.append(
-            f'<text x="{px0 - 8}" y="{gy + 4}" font-size="11" text-anchor="end" '
-            f'fill="{blue}">{kmax * i / 4:.0f}</text>'
-        )
-        out.append(
-            f'<text x="{px1 + 8}" y="{gy + 4}" font-size="11" text-anchor="start" '
-            f'fill="{orange}">{100 * i // 4}</text>'
-        )
-
+    # --- panel A: planned (gray reference) vs expected day (ink) -------------
+    a_py1, a_py0 = 130, 306
+    plate.panel_title(out, px0, a_py1 - 18, "Distance (km) — planned vs expected day")
+    plate.h_grid(out, px0, px1, a_py0, a_py1, kmax)
     for r in rows:
-        x = sx(r.headroom_pct)
-        out.append(f'<line x1="{x}" y1="{py0}" x2="{x}" y2="{py0 + 5}" stroke="{ink}" stroke-width="1"/>')
-        out.append(
-            f'<text x="{x}" y="{py0 + 19}" font-size="11" text-anchor="middle" fill="{ink}">'
-            f"{r.headroom_pct}%</text>"
-        )
+        plate.x_tick(out, sx(r.headroom_pct), a_py0, f"{r.headroom_pct}%")
+    planned = [(sx(r.headroom_pct), sy(r.planned_distance, kmax, a_py0, a_py1)) for r in rows]
+    expected = [(sx(r.headroom_pct), sy(r.expected_total_km, kmax, a_py0, a_py1)) for r in rows]
+    plate.series_line(out, planned, plate.REF_GRAY)
+    plate.series_line(out, expected, plate.BLUE)
+    # direct labels at the line ends, in text ink (identity also in the legend)
+    plate.direct_label(
+        out, expected[-1][0], round(expected[-1][1] - 10, 2),
+        f"expected incl. recourse {rows[-1].expected_total_km:,.0f}", anchor="end",
+    )
+    plate.direct_label(
+        out, planned[-1][0], round(planned[-1][1] + 18, 2),
+        f"planned (forecast) {rows[-1].planned_distance:,.0f}", anchor="end",
+    )
+    plate.legend_line(out, px0 + 6, a_py1 + 12, plate.BLUE, "expected total incl. recourse")
+    plate.legend_line(out, px0 + 226, a_py1 + 12, plate.REF_GRAY, "planned distance (forecast world)")
 
-    out.append(
-        f'<text x="{(px0 + px1) / 2}" y="{h - 16}" font-size="12" text-anchor="middle" '
-        f'fill="{ink}">capacity headroom the plan was built with</text>'
+    # --- panel B: failure share ----------------------------------------------
+    b_py1, b_py0 = 386, 562
+    plate.panel_title(
+        out, px0, b_py1 - 18, "Scenarios with at least one restock failure (%)"
     )
-    out.append(
-        f'<text x="16" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" fill="{blue}" '
-        f'transform="rotate(-90 16 {(py0 + py1) / 2})">distance (km)</text>'
-    )
-    out.append(
-        f'<text x="{w - 14}" y="{(py0 + py1) / 2}" font-size="12" text-anchor="middle" '
-        f'fill="{orange}" transform="rotate(90 {w - 14} {(py0 + py1) / 2})">'
-        f"scenarios with a failure (%)</text>"
-    )
-
-    pts_f = " ".join(f"{sx(r.headroom_pct)},{sy_pc(r.fail_scenarios_pct)}" for r in rows)
-    out.append(f'<polyline points="{pts_f}" fill="none" stroke="{orange}" stroke-width="2" stroke-dasharray="5 4"/>')
+    plate.h_grid(out, px0, px1, b_py0, b_py1, 100.0)
     for r in rows:
-        out.append(f'<circle cx="{sx(r.headroom_pct)}" cy="{sy_pc(r.fail_scenarios_pct)}" r="3" fill="{orange}"/>')
-
-    pts_e = " ".join(f"{sx(r.headroom_pct)},{sy_km(r.expected_total_km)}" for r in rows)
-    out.append(f'<polyline points="{pts_e}" fill="none" stroke="{green}" stroke-width="2.5"/>')
-    for r in rows:
-        out.append(f'<circle cx="{sx(r.headroom_pct)}" cy="{sy_km(r.expected_total_km)}" r="3.5" fill="{green}"/>')
-
-    pts_p = " ".join(f"{sx(r.headroom_pct)},{sy_km(r.planned_distance)}" for r in rows)
-    out.append(f'<polyline points="{pts_p}" fill="none" stroke="{blue}" stroke-width="2.5"/>')
-    for r in rows:
-        out.append(f'<circle cx="{sx(r.headroom_pct)}" cy="{sy_km(r.planned_distance)}" r="3.5" fill="{blue}"/>')
-
-    lx, ly = px0 + 12, py1 + 14
-    out.append(f'<line x1="{lx}" y1="{ly}" x2="{lx + 26}" y2="{ly}" stroke="{blue}" stroke-width="2.5"/>')
-    out.append(f'<text x="{lx + 32}" y="{ly + 4}" font-size="11" fill="{ink}">planned distance (forecast world)</text>')
-    out.append(f'<line x1="{lx}" y1="{ly + 18}" x2="{lx + 26}" y2="{ly + 18}" stroke="{green}" stroke-width="2.5"/>')
-    out.append(f'<text x="{lx + 32}" y="{ly + 22}" font-size="11" fill="{ink}">expected total incl. recourse</text>')
-    out.append(
-        f'<line x1="{lx}" y1="{ly + 36}" x2="{lx + 26}" y2="{ly + 36}" stroke="{orange}" '
-        f'stroke-width="2" stroke-dasharray="5 4"/>'
+        plate.x_tick(out, sx(r.headroom_pct), b_py0, f"{r.headroom_pct}%")
+    fails = [(sx(r.headroom_pct), sy(r.fail_scenarios_pct, 100.0, b_py0, b_py1)) for r in rows]
+    plate.series_line(out, fails, plate.ORANGE)
+    plate.direct_label(
+        out, round(fails[0][0] + 8, 2), round(fails[0][1] - 8, 2),
+        f"{rows[0].fail_scenarios_pct:.0f}%",
     )
-    out.append(f'<text x="{lx + 32}" y="{ly + 40}" font-size="11" fill="{ink}">scenarios with a failure</text>')
-    out.append("</svg>")
+    plate.direct_label(
+        out, fails[-1][0], round(fails[-1][1] - 10, 2),
+        f"{rows[-1].fail_scenarios_pct:.0f}%", anchor="end",
+    )
+
+    plate.x_axis_label(out, px0, px1, 600, "capacity headroom the plan was built with")
+    plate.footer(
+        out, w, h,
+        "One axis per panel; planned is the quiet gray reference. Fixed solution limit — "
+        "regenerates byte-identically. Table: robustness.csv / .md",
+    )
+    plate.close_svg(out)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(out) + "\n", encoding="utf-8")

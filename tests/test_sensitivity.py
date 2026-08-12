@@ -62,4 +62,6 @@ def test_build_writes_csv_svg_md(n30, tmp_path):
     assert csv_text.startswith("vehicles,van_capacity,total_distance_km,")
     svg_text = (tmp_path / "fleet_sensitivity.svg").read_text()
     assert svg_text.lstrip().startswith("<svg")
+    assert "PLATE 02" in svg_text  # numbered plate on the dispatch board
+    assert "illustrative estimates" in svg_text  # the honesty line stays on the plate
     assert "trade-off" in (tmp_path / "fleet_sensitivity.md").read_text().lower()
