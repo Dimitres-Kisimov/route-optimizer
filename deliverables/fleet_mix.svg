@@ -1,71 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="640" viewBox="0 0 760 640" font-family="system-ui,Segoe UI,Arial,sans-serif">
-<rect width="760" height="640" fill="#fcfcfb"/>
-<rect x="0.5" y="0.5" width="759" height="639" fill="none" stroke="#e1e0d9" stroke-width="1"/>
-<text x="56" y="28" font-size="10" font-weight="600" letter-spacing="1.6" fill="#898781">PLATE 04 &#183; DISPATCH BOARD</text>
-<text x="56" y="52" font-size="17" font-weight="600" fill="#0b0b0b">Fleet mix - cost of each option - n60</text>
-<text x="56" y="70" font-size="11" fill="#52514e">or-tools, deterministic solution limit 200; catalogue costs are illustrative estimates, not certified</text>
-<text x="56" y="112" font-size="11.5" font-weight="600" fill="#0b0b0b">Cost (EUR/day) — fixed + variable, total labelled</text>
-<line x1="56" y1="330.0" x2="732" y2="330.0" stroke="#c3c2b7" stroke-width="1"/>
-<text x="48" y="333.5" font-size="10" text-anchor="end" fill="#898781">0</text>
-<line x1="56" y1="290.0" x2="732" y2="290.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="293.5" font-size="10" text-anchor="end" fill="#898781">500</text>
-<line x1="56" y1="250.0" x2="732" y2="250.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="253.5" font-size="10" text-anchor="end" fill="#898781">1000</text>
-<line x1="56" y1="210.0" x2="732" y2="210.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="213.5" font-size="10" text-anchor="end" fill="#898781">1500</text>
-<line x1="56" y1="170.0" x2="732" y2="170.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="173.5" font-size="10" text-anchor="end" fill="#898781">2000</text>
-<line x1="56" y1="130.0" x2="732" y2="130.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="133.5" font-size="10" text-anchor="end" fill="#898781">2500</text>
-<rect x="112.5" y="294.0" width="56.0" height="36.0" fill="#86b6ef"/>
-<path d="M 112.5 292.0 L 112.5 226.96 Q 112.5 223.96 115.5 223.96 L 165.5 223.96 Q 168.5 223.96 168.5 226.96 L 168.5 292.0 Z" fill="#2a78d6"/>
-<text x="140.5" y="216.96" font-size="11" font-weight="600" text-anchor="middle" fill="#0b0b0b">1,325</text>
-<text x="140.5" y="346" font-size="10.5" text-anchor="middle" fill="#0b0b0b">optimized mix</text>
-<text x="140.5" y="359" font-size="9.5" text-anchor="middle" fill="#898781">5 large</text>
-<rect x="281.5" y="269.2" width="56.0" height="60.8" fill="#86b6ef"/>
-<path d="M 281.5 267.2 L 281.5 171.51 Q 281.5 168.51 284.5 168.51 L 334.5 168.51 Q 337.5 168.51 337.5 171.51 L 337.5 267.2 Z" fill="#2a78d6"/>
-<text x="309.5" y="161.51" font-size="11" font-weight="600" text-anchor="middle" fill="#0b0b0b">2,019</text>
-<text x="309.5" y="346" font-size="10.5" text-anchor="middle" fill="#0b0b0b">all-small</text>
-<text x="309.5" y="359" font-size="9.5" text-anchor="middle" fill="#898781">19 small</text>
-<rect x="450.5" y="282.0" width="56.0" height="48.0" fill="#86b6ef"/>
-<path d="M 450.5 280.0 L 450.5 204.49 Q 450.5 201.49 453.5 201.49 L 503.5 201.49 Q 506.5 201.49 506.5 204.49 L 506.5 280.0 Z" fill="#2a78d6"/>
-<text x="478.5" y="194.49" font-size="11" font-weight="600" text-anchor="middle" fill="#0b0b0b">1,606</text>
-<text x="478.5" y="346" font-size="10.5" text-anchor="middle" fill="#0b0b0b">all-medium</text>
-<text x="478.5" y="359" font-size="9.5" text-anchor="middle" fill="#898781">10 medium</text>
-<rect x="619.5" y="294.0" width="56.0" height="36.0" fill="#86b6ef"/>
-<path d="M 619.5 292.0 L 619.5 226.96 Q 619.5 223.96 622.5 223.96 L 672.5 223.96 Q 675.5 223.96 675.5 226.96 L 675.5 292.0 Z" fill="#2a78d6"/>
-<text x="647.5" y="216.96" font-size="11" font-weight="600" text-anchor="middle" fill="#0b0b0b">1,325</text>
-<text x="647.5" y="346" font-size="10.5" text-anchor="middle" fill="#0b0b0b">all-large</text>
-<text x="647.5" y="359" font-size="9.5" text-anchor="middle" fill="#898781">5 large</text>
-<rect x="62" y="132" width="12" height="10" fill="#86b6ef"/>
-<text x="80" y="141" font-size="10" fill="#52514e">fixed cost (deployed vans)</text>
-<rect x="252" y="132" width="12" height="10" fill="#2a78d6"/>
-<text x="270" y="141" font-size="10" fill="#52514e">variable cost (km driven)</text>
-<text x="56" y="392" font-size="11.5" font-weight="600" fill="#0b0b0b">Est. CO2 (kg/day) — illustrative factors per van type</text>
-<line x1="56" y1="560.0" x2="732" y2="560.0" stroke="#c3c2b7" stroke-width="1"/>
-<text x="48" y="563.5" font-size="10" text-anchor="end" fill="#898781">0</text>
-<line x1="56" y1="530.0" x2="732" y2="530.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="533.5" font-size="10" text-anchor="end" fill="#898781">100</text>
-<line x1="56" y1="500.0" x2="732" y2="500.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="503.5" font-size="10" text-anchor="end" fill="#898781">200</text>
-<line x1="56" y1="470.0" x2="732" y2="470.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="473.5" font-size="10" text-anchor="end" fill="#898781">300</text>
-<line x1="56" y1="440.0" x2="732" y2="440.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="443.5" font-size="10" text-anchor="end" fill="#898781">400</text>
-<line x1="56" y1="410.0" x2="732" y2="410.0" stroke="#e1e0d9" stroke-width="1"/>
-<text x="48" y="413.5" font-size="10" text-anchor="end" fill="#898781">500</text>
-<path d="M 125.5 560 L 125.5 498.8 Q 125.5 495.8 128.5 495.8 L 152.5 495.8 Q 155.5 495.8 155.5 498.8 L 155.5 560 Z" fill="#1baf7a"/>
-<text x="140.5" y="488.8" font-size="10" text-anchor="middle" fill="#52514e">214</text>
-<text x="140.5" y="576" font-size="9.5" text-anchor="middle" fill="#898781">optimized mix</text>
-<path d="M 294.5 560 L 294.5 465.9 Q 294.5 462.9 297.5 462.9 L 321.5 462.9 Q 324.5 462.9 324.5 465.9 L 324.5 560 Z" fill="#1baf7a"/>
-<text x="309.5" y="455.9" font-size="10" text-anchor="middle" fill="#52514e">324</text>
-<text x="309.5" y="576" font-size="9.5" text-anchor="middle" fill="#898781">all-small</text>
-<path d="M 463.5 560 L 463.5 487.52 Q 463.5 484.52 466.5 484.52 L 490.5 484.52 Q 493.5 484.52 493.5 487.52 L 493.5 560 Z" fill="#1baf7a"/>
-<text x="478.5" y="477.52" font-size="10" text-anchor="middle" fill="#52514e">252</text>
-<text x="478.5" y="576" font-size="9.5" text-anchor="middle" fill="#898781">all-medium</text>
-<path d="M 632.5 560 L 632.5 498.8 Q 632.5 495.8 635.5 495.8 L 659.5 495.8 Q 662.5 495.8 662.5 498.8 L 662.5 560 Z" fill="#1baf7a"/>
-<text x="647.5" y="488.8" font-size="10" text-anchor="middle" fill="#52514e">214</text>
-<text x="647.5" y="576" font-size="9.5" text-anchor="middle" fill="#898781">all-large</text>
-<text x="394.0" y="600" font-size="11" text-anchor="middle" fill="#52514e">fleet option (same options in both panels)</text>
-<text x="56" y="626" font-size="9.5" fill="#898781">Money and emissions on separate axes, shared option order. Fixed solution limit — regenerates byte-identically. Table: fleet_mix.csv / .md</text>
+<rect width="760" height="640" fill="#faf9f6"/>
+<rect x="0.5" y="0.5" width="759" height="639" fill="none" stroke="#e2e1db" stroke-width="1"/>
+<text x="56" y="28" font-size="10" font-weight="600" letter-spacing="1.6" fill="#8a8d92">PLATE 04 &#183; DISPATCH BOARD</text>
+<text x="56" y="52" font-size="17" font-weight="600" fill="#1d2024">Fleet mix - cost of each option - n60</text>
+<text x="56" y="70" font-size="11" fill="#4c5158">or-tools, deterministic solution limit 200; catalogue costs are illustrative estimates, not certified</text>
+<text x="56" y="112" font-size="11.5" font-weight="600" fill="#1d2024">Cost (EUR/day) — fixed + variable, total labelled</text>
+<line x1="56" y1="330.0" x2="732" y2="330.0" stroke="#c2c0b8" stroke-width="1"/>
+<text x="48" y="333.5" font-size="10" text-anchor="end" fill="#8a8d92">0</text>
+<line x1="56" y1="290.0" x2="732" y2="290.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="293.5" font-size="10" text-anchor="end" fill="#8a8d92">500</text>
+<line x1="56" y1="250.0" x2="732" y2="250.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="253.5" font-size="10" text-anchor="end" fill="#8a8d92">1000</text>
+<line x1="56" y1="210.0" x2="732" y2="210.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="213.5" font-size="10" text-anchor="end" fill="#8a8d92">1500</text>
+<line x1="56" y1="170.0" x2="732" y2="170.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="173.5" font-size="10" text-anchor="end" fill="#8a8d92">2000</text>
+<line x1="56" y1="130.0" x2="732" y2="130.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="133.5" font-size="10" text-anchor="end" fill="#8a8d92">2500</text>
+<rect x="112.5" y="294.0" width="56.0" height="36.0" fill="#7fb0ee"/>
+<path d="M 112.5 292.0 L 112.5 226.96 Q 112.5 223.96 115.5 223.96 L 165.5 223.96 Q 168.5 223.96 168.5 226.96 L 168.5 292.0 Z" fill="#1f6fd0"/>
+<text x="140.5" y="216.96" font-size="11" font-weight="600" text-anchor="middle" fill="#1d2024">1,325</text>
+<text x="140.5" y="346" font-size="10.5" text-anchor="middle" fill="#1d2024">optimized mix</text>
+<text x="140.5" y="359" font-size="9.5" text-anchor="middle" fill="#8a8d92">5 large</text>
+<rect x="281.5" y="269.2" width="56.0" height="60.8" fill="#7fb0ee"/>
+<path d="M 281.5 267.2 L 281.5 171.51 Q 281.5 168.51 284.5 168.51 L 334.5 168.51 Q 337.5 168.51 337.5 171.51 L 337.5 267.2 Z" fill="#1f6fd0"/>
+<text x="309.5" y="161.51" font-size="11" font-weight="600" text-anchor="middle" fill="#1d2024">2,019</text>
+<text x="309.5" y="346" font-size="10.5" text-anchor="middle" fill="#1d2024">all-small</text>
+<text x="309.5" y="359" font-size="9.5" text-anchor="middle" fill="#8a8d92">19 small</text>
+<rect x="450.5" y="282.0" width="56.0" height="48.0" fill="#7fb0ee"/>
+<path d="M 450.5 280.0 L 450.5 204.49 Q 450.5 201.49 453.5 201.49 L 503.5 201.49 Q 506.5 201.49 506.5 204.49 L 506.5 280.0 Z" fill="#1f6fd0"/>
+<text x="478.5" y="194.49" font-size="11" font-weight="600" text-anchor="middle" fill="#1d2024">1,606</text>
+<text x="478.5" y="346" font-size="10.5" text-anchor="middle" fill="#1d2024">all-medium</text>
+<text x="478.5" y="359" font-size="9.5" text-anchor="middle" fill="#8a8d92">10 medium</text>
+<rect x="619.5" y="294.0" width="56.0" height="36.0" fill="#7fb0ee"/>
+<path d="M 619.5 292.0 L 619.5 226.96 Q 619.5 223.96 622.5 223.96 L 672.5 223.96 Q 675.5 223.96 675.5 226.96 L 675.5 292.0 Z" fill="#1f6fd0"/>
+<text x="647.5" y="216.96" font-size="11" font-weight="600" text-anchor="middle" fill="#1d2024">1,325</text>
+<text x="647.5" y="346" font-size="10.5" text-anchor="middle" fill="#1d2024">all-large</text>
+<text x="647.5" y="359" font-size="9.5" text-anchor="middle" fill="#8a8d92">5 large</text>
+<rect x="62" y="132" width="12" height="10" fill="#7fb0ee"/>
+<text x="80" y="141" font-size="10" fill="#4c5158">fixed cost (deployed vans)</text>
+<rect x="252" y="132" width="12" height="10" fill="#1f6fd0"/>
+<text x="270" y="141" font-size="10" fill="#4c5158">variable cost (km driven)</text>
+<text x="56" y="392" font-size="11.5" font-weight="600" fill="#1d2024">Est. CO2 (kg/day) — illustrative factors per van type</text>
+<line x1="56" y1="560.0" x2="732" y2="560.0" stroke="#c2c0b8" stroke-width="1"/>
+<text x="48" y="563.5" font-size="10" text-anchor="end" fill="#8a8d92">0</text>
+<line x1="56" y1="530.0" x2="732" y2="530.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="533.5" font-size="10" text-anchor="end" fill="#8a8d92">100</text>
+<line x1="56" y1="500.0" x2="732" y2="500.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="503.5" font-size="10" text-anchor="end" fill="#8a8d92">200</text>
+<line x1="56" y1="470.0" x2="732" y2="470.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="473.5" font-size="10" text-anchor="end" fill="#8a8d92">300</text>
+<line x1="56" y1="440.0" x2="732" y2="440.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="443.5" font-size="10" text-anchor="end" fill="#8a8d92">400</text>
+<line x1="56" y1="410.0" x2="732" y2="410.0" stroke="#e2e1db" stroke-width="1"/>
+<text x="48" y="413.5" font-size="10" text-anchor="end" fill="#8a8d92">500</text>
+<path d="M 125.5 560 L 125.5 498.8 Q 125.5 495.8 128.5 495.8 L 152.5 495.8 Q 155.5 495.8 155.5 498.8 L 155.5 560 Z" fill="#12a678"/>
+<text x="140.5" y="488.8" font-size="10" text-anchor="middle" fill="#4c5158">214</text>
+<text x="140.5" y="576" font-size="9.5" text-anchor="middle" fill="#8a8d92">optimized mix</text>
+<path d="M 294.5 560 L 294.5 465.9 Q 294.5 462.9 297.5 462.9 L 321.5 462.9 Q 324.5 462.9 324.5 465.9 L 324.5 560 Z" fill="#12a678"/>
+<text x="309.5" y="455.9" font-size="10" text-anchor="middle" fill="#4c5158">324</text>
+<text x="309.5" y="576" font-size="9.5" text-anchor="middle" fill="#8a8d92">all-small</text>
+<path d="M 463.5 560 L 463.5 487.52 Q 463.5 484.52 466.5 484.52 L 490.5 484.52 Q 493.5 484.52 493.5 487.52 L 493.5 560 Z" fill="#12a678"/>
+<text x="478.5" y="477.52" font-size="10" text-anchor="middle" fill="#4c5158">252</text>
+<text x="478.5" y="576" font-size="9.5" text-anchor="middle" fill="#8a8d92">all-medium</text>
+<path d="M 632.5 560 L 632.5 498.8 Q 632.5 495.8 635.5 495.8 L 659.5 495.8 Q 662.5 495.8 662.5 498.8 L 662.5 560 Z" fill="#12a678"/>
+<text x="647.5" y="488.8" font-size="10" text-anchor="middle" fill="#4c5158">214</text>
+<text x="647.5" y="576" font-size="9.5" text-anchor="middle" fill="#8a8d92">all-large</text>
+<text x="394.0" y="600" font-size="11" text-anchor="middle" fill="#4c5158">fleet option (same options in both panels)</text>
+<text x="56" y="626" font-size="9.5" fill="#8a8d92">Money and emissions on separate axes, shared option order. Fixed solution limit — regenerates byte-identically. Table: fleet_mix.csv / .md</text>
 </svg>

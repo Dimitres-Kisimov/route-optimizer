@@ -5,6 +5,7 @@
     python -m routeopt --instance data/instances/n60.json --time-limit 10 --metric manhattan
     python -m routeopt --instance data/instances/n60.json --stress
     python -m routeopt --instance data/instances/n60.json --mix
+    python -m routeopt --instance data/instances/n60.json --shift
 """
 
 from __future__ import annotations
@@ -15,9 +16,10 @@ from pathlib import Path
 from .fleetmix import build_fleet_mix
 from .heuristic import Solution, clarke_wright, nearest_neighbour
 from .model import distance_matrix, load_instance
-from .report import build_deliverables
+from .report import build_deliverables, replot_from_plan
 from .robustness import build_robustness
 from .sensitivity import build_fleet_sensitivity
+from .shifts import build_driver_shifts
 from .solver import solve_cvrp
 from .timewindows import build_service_analysis
 
@@ -138,6 +140,48 @@ def _run_mix(instance, metric: str, solution_limit: int) -> int:
     return 0
 
 
+def _run_shift(instance, metric: str, solution_limit: int) -> int:
+    out = build_driver_shifts(instance, metric=metric, solution_limit=solution_limit)
+    rules = out["rules"]
+    audit = out["audit"]
+    print(
+        f"\ndriver shifts / working time (informed by EU driving-time rules, NOT a "
+        f"compliance certification; deterministic solution limit {solution_limit}):\n"
+    )
+    print(
+        f"  rules: duty <= {rules.max_shift_min:.0f} min, driving <= "
+        f"{rules.max_drive_min:.0f} min, {rules.break_min:.0f}-min break before "
+        f"{rules.max_continuous_drive_min:.0f} min continuous; "
+        f"{rules.service_min:.0f} min/stop at {rules.speed_kmh:.0f} km/h"
+    )
+    print(
+        f"\n  today's shift-blind savings plan: "
+        f"{audit.vans - audit.vans_over_shift}/{audit.vans} vans inside the envelope, "
+        f"worst duty {audit.worst_duty_min:,.0f} min, worst continuous drive "
+        f"{audit.worst_continuous_drive_min:,.0f} min, {audit.breaks} break(s)"
+    )
+    print(
+        f"\n{'cap':>5} {'feasible':>9} {'vans':>5} {'over_fleet':>10} {'distance':>9} "
+        f"{'longest':>8} {'worst_duty':>10} {'breaks':>7}"
+    )
+    for p in out["points"]:
+        if not p.feasible:
+            print(f"{p.cap_min:5d} {'no':>9} {'-':>5} {'-':>10} {'-':>9} {'-':>8} {'-':>10} {'-':>7}")
+            continue
+        print(
+            f"{p.cap_min:5d} {'yes':>9} {p.vans:5d} {p.over_fleet:10d} "
+            f"{p.total_distance:9.1f} {p.longest_route:8.1f} {p.worst_duty_min:10.1f} "
+            f"{p.breaks:7d}"
+        )
+    print("\nthe read:")
+    for line in out["read"]:
+        print(f"  {line}")
+    print(f"\nwrote {out['csv']}")
+    print(f"wrote {out['svg']}")
+    print(f"wrote {out['md']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="routeopt", description="CVRP route optimizer (OR-Tools vs savings).")
     ap.add_argument("--instance", required=True, type=Path, help="path to an instance JSON")
@@ -169,13 +213,27 @@ def main(argv: list[str] | None = None) -> int:
         "fleet against every homogeneous option (fixed + per-km costs per van type), "
         "writes fleet_mix.csv + fleet_mix.svg + fleet_mix.md",
     )
+    ap.add_argument(
+        "--shift",
+        action="store_true",
+        help="driver-shift / working-time layer (deterministic): audits today's shift-blind "
+        "plan against a modelled duty envelope, driving limit and mandated breaks, then "
+        "re-solves under a sweep of shift caps; writes driver_shifts.csv + .svg + .md. "
+        "Informed by EU driving-time rules, NOT a compliance certification",
+    )
     ap.add_argument("--scenarios", type=int, default=200, help="stress test: number of seeded demand scenarios")
     ap.add_argument("--demand-cv", type=float, default=0.15, help="stress test: demand noise level (coefficient of variation)")
     ap.add_argument(
         "--solution-limit",
         type=int,
         default=200,
-        help="stress test / fleet mix: OR-Tools deterministic stopping rule (solutions, not seconds)",
+        help="stress test / fleet mix / driver shifts: OR-Tools deterministic stopping rule (solutions, not seconds)",
+    )
+    ap.add_argument(
+        "--replot",
+        action="store_true",
+        help="redraw deliverables/routes.png (Plate 01) from the committed route_plan.csv "
+        "without re-solving — same numbers, current plate design",
     )
     ap.add_argument("--no-deliverables", action="store_true", help="skip writing CSV/PNG/summary")
     args = ap.parse_args(argv)
@@ -200,6 +258,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.mix:
         return _run_mix(instance, args.metric, args.solution_limit)
+
+    if args.shift:
+        return _run_shift(instance, args.metric, args.solution_limit)
+
+    if args.replot:
+        print(f"\nwrote {replot_from_plan(instance, metric=args.metric)}")
+        return 0
 
     ort = solve_cvrp(instance, metric=args.metric, time_limit_s=args.time_limit)
 

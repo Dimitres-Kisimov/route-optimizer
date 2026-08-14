@@ -227,14 +227,70 @@ always runs under a fixed **solution limit**, never a wall clock, so
 notes: the plans are heuristic solutions under a fixed budget, not proven
 optima — and because the mixed pool has a much larger search space, the mixed
 solve can trail a homogeneous one under the same budget (the deliverable
-reports whatever falls). No route-duration cap is modelled; the longest-route
-column is the service price of consolidating into fewer, bigger vans.
+reports whatever falls). The route-duration cap the longest-route column asks
+for is the next section.
+
+## Driver shifts and working time
+
+The longest-route column above is a *proxy* for service: the layer that turns it
+into a constraint models the working day explicitly. A route's day is exactly
+three kinds of minute — **drive** (`distance x 60 / speed`, the time-window
+layer's convention), **service** (a fixed number of minutes at each customer)
+and **break** — under a duty envelope `S`, a daily driving limit, and a break of
+`B` minutes required before continuous driving passes `D`.
+
+The defaults (`S = 600`, driving `<= 540`, `D = 270`, `B = 45`, at 40 km/h and
+5 min/stop) are **informed by EU Regulation (EC) No 561/2006** — art. 6 daily
+driving, art. 7 breaks — and are **not an implementation of it**. Not modelled:
+the 15+30 split break, the twice-weekly 10-hour driving extension, multi-manning,
+daily and weekly rest between shifts, and the Working Time Directive's own
+limits. A service stop is deliberately *not* counted as rest, which is the
+conservative reading.
+
+**The break scheduler** walks a route leg by leg, splitting a leg across as many
+breaks as it needs: it drives until continuous driving would exceed `D`, rests
+`B`, and resets. `duty = drive + service + break` holds by construction, and the
+walk never rests after the last kilometre — so a route whose drive+service span
+is `t` needs at most `ceil(t / D) - 1` breaks.
+
+**The solver bound.** OR-Tools gets one added **Duty** dimension whose transit is
+`service(from) + travel(from, to)`; with the start cumulative fixed at zero, a
+capacity on that dimension is exactly a per-route span limit. But the dimension
+knows nothing about breaks, so the bound handed to it must already have paid for
+them. From the count above, spans in the window `(k*D, (k+1)*D]` cost at most `k`
+breaks, so the largest span affordable with `k` breaks is
+`min((k+1)*D, S - k*B)`; the bound is the best of those, capped by the daily
+driving limit (driving is bounded by the span). On the defaults that is **540
+min** of drive+service: one break, `540 + 45 = 585 <= 600`. The bound is
+conservative — service minutes are counted against the driving threshold — so a
+returned plan is legal *after* scheduling, and the audit re-checks it rather
+than asserting it.
+
+**Sizing the pool.** A routing model with too few vans for the cap has no
+solution for a solution limit to stop at, so the search would never end. A
+duty-aware greedy construction (nearest-neighbour with an extra admission test:
+reach it, serve it, and still get home inside the bound) settles that in one
+pass: its van count plus two slack vans sizes the pool, and its failure is a
+*proof* of infeasibility at any fleet size — one customer's out-and-back trip
+alone exceeds the cap. The reported answer is therefore how many vans a shift
+*needs*, compared against the fleet the depot owns.
+
+Everything here runs under a fixed **solution limit**, so
+`deliverables/driver_shifts.{csv,svg,md}` regenerate byte-identically. Honest
+limits: one flat speed, no congestion, no time windows and no depot loading
+time, so a real duty is longer than any number reported; and the capped plans
+are heuristic solutions under a fixed budget, so the distance curve need not be
+monotone in the cap.
 
 ## Reproducibility
 
 Instances are generated with fixed NumPy seeds (`data/generate_instances.py`), so
 the committed JSON is byte-for-byte reproducible. OR-Tools' GLS is time-limited,
 so its final distance can wobble by a fraction of a percent between runs and
-machines; the baselines are deterministic. The sensitivity, robustness and
-fleet-mix layers avoid the wobble entirely (savings heuristic; fixed solution
-limits), so their committed deliverables regenerate byte-identically.
+machines; the baselines are deterministic. The sensitivity, robustness, fleet-mix
+and driver-shift layers avoid the wobble entirely (savings heuristic; fixed
+solution limits), so their committed deliverables regenerate byte-identically.
+The route map is the one drawn deliverable whose numbers come from a wall-clock
+solve, so it is re-inked rather than re-solved: `--replot` reads the routes back
+out of the committed `route_plan.csv` and redraws Plate 01, which keeps the
+design current without moving the figures underneath it.

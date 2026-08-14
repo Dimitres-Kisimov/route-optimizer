@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>route-optimizer — CVRP dashboard</title>
 <style>
+  /* Same dispatch-board tones as routeopt/plate.py: asphalt and concrete for
+     the chrome, road-marking white for the nodes, vehicle liveries for the
+     routes. Both modes are selected and validated against their own surface. */
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5b6470;
-    --line: #e2e6ea; --depot: #d55e00; --accent: #0072b2;
+    --bg: #f2f1ed; --panel: #faf9f6; --ink: #1d2024; --muted: #4c5158;
+    --line: #e2e1db; --marking: #ffffff; --accent: #1f6fd0;
   }
   :root[data-theme="dark"] {
-    --bg: #14181d; --panel: #1c2228; --ink: #e8ecef; --muted: #9aa4b0;
-    --line: #2b333b; --depot: #ff8c42; --accent: #4aa8e0;
+    --bg: #131619; --panel: #1c1f23; --ink: #e9eaec; --muted: #9aa0a6;
+    --line: #2b2f34; --marking: #1c1f23; --accent: #3d85e0;
   }
   * { box-sizing: border-box; }
   body {
@@ -85,8 +88,25 @@
 <script src="data.js"></script>
 <script>
 (function () {
-  const PALETTE = ["#0072B2","#D55E00","#009E73","#CC79A7","#E69F00","#56B4E9",
-    "#B79F00","#000000","#8C564B","#7F7F7F","#1B9E77","#666666","#A6761D","#E7298A","#66A61E"];
+  // Vehicle liveries — the same eight fixed slots as routeopt/plate.py, in the
+  // same order, stepped once for each surface. Slots are NEVER cycled into new
+  // hues: vans 9-16 reuse slots 1-8 dashed (composite colour+dash), and beyond
+  // that the honest gray takes over while the numbered table carries identity.
+  const LIVERY_LIGHT = ["#1f6fd0","#e8621f","#12a678","#e9a400","#e2799f","#00703c","#4d3da4","#d33c3a"];
+  const LIVERY_DARK  = ["#3d85e0","#d95e2a","#159a6d","#c08200","#d16b93","#128a4a","#9086e0","#e06a68"];
+  const REF_GRAY = "#8a8d92";
+  const DASH = [6, 3.5];
+
+  function livery() {
+    return document.documentElement.getAttribute("data-theme") === "dark" ? LIVERY_DARK : LIVERY_LIGHT;
+  }
+  // 1-based vehicle -> {color, dashed}; mirrors plate.vehicle_style exactly.
+  function vehicleStyle(v) {
+    const slots = livery();
+    if (v <= slots.length) return { color: slots[v - 1], dashed: false };
+    if (v <= 2 * slots.length) return { color: slots[v - 1 - slots.length], dashed: true };
+    return { color: REF_GRAY, dashed: true };
+  }
 
   const D = window.ROUTEOPT;
   if (!D) { document.getElementById("subtitle").textContent = "data.js missing — run web/build_data.py"; return; }
@@ -125,27 +145,36 @@
     const css = getComputedStyle(document.documentElement);
     ctx.clearRect(0, 0, W, H);
 
-    // routes
+    const ink = css.getPropertyValue("--ink").trim();
+    const marking = css.getPropertyValue("--marking").trim();
+    const muted = css.getPropertyValue("--muted").trim();
+
+    // routes — fixed livery slots, dashed past slot 8, never a cycled hue
     sol.routes.forEach((r, i) => {
-      ctx.strokeStyle = PALETTE[i % PALETTE.length];
-      ctx.lineWidth = 2.4; ctx.globalAlpha = 0.9;
+      const style = vehicleStyle(i + 1);
+      ctx.strokeStyle = style.color;
+      ctx.setLineDash(style.dashed ? DASH : []);
+      ctx.lineWidth = 2.4; ctx.globalAlpha = 0.92;
       ctx.beginPath();
       r.forEach((n, k) => { const X = px(inst.coords[n][0]), Y = py(inst.coords[n][1]); k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
       ctx.stroke();
     });
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
 
-    // customers
-    ctx.fillStyle = css.getPropertyValue("--muted").trim();
+    // customers — road-marking white, ringed so they read over any livery
     for (let n = 0; n < inst.coords.length; n++) {
       if (n === inst.depot) continue;
-      ctx.beginPath(); ctx.arc(px(inst.coords[n][0]), py(inst.coords[n][1]), 4, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(px(inst.coords[n][0]), py(inst.coords[n][1]), 4, 0, 7);
+      ctx.fillStyle = marking; ctx.fill();
+      ctx.strokeStyle = muted; ctx.lineWidth = 1.1; ctx.stroke();
     }
-    // depot star-ish
+    // depot — the anchor mark: concentric rings in ink, not a livery hue
     const dx = px(inst.coords[inst.depot][0]), dy = py(inst.coords[inst.depot][1]);
-    ctx.fillStyle = css.getPropertyValue("--depot").trim();
-    ctx.beginPath(); ctx.arc(dx, dy, 9, 0, 7); ctx.fill();
-    ctx.strokeStyle = "#000"; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(dx, dy, 10, 0, 7);
+    ctx.fillStyle = marking; ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.beginPath(); ctx.arc(dx, dy, 3.4, 0, 7); ctx.fillStyle = ink; ctx.fill();
 
     // panel
     document.getElementById("method-label").textContent = showSavings ? "Clarke-Wright savings" : "OR-Tools (GLS)";
@@ -163,7 +192,13 @@
     tbody.innerHTML = "";
     sol.routes.forEach((r, i) => {
       const tr = document.createElement("tr");
-      const sw = `<span class="swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>`;
+      const st = vehicleStyle(i + 1);
+      // dashed vans get a striped swatch, so the table shows the same
+      // colour+dash encoding the map draws
+      const fill = st.dashed
+        ? `repeating-linear-gradient(135deg, ${st.color} 0 3px, transparent 3px 5px)`
+        : st.color;
+      const sw = `<span class="swatch" style="background:${fill}"></span>`;
       tr.innerHTML = `<td>${sw}${i + 1}</td><td>${r.length - 2}</td><td>${sol.loads[i]}/${inst.capacity}</td><td>${routeDistance(r).toFixed(1)}</td>`;
       tbody.appendChild(tr);
     });

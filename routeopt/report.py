@@ -4,12 +4,20 @@ Everything a dispatcher or a reviewer would actually want to look at, written to
 ``deliverables/``.
 
 The routes PNG is **Plate 01** of the dispatch board (see :mod:`routeopt.plate`
-for the shared design system): a dispatcher's wall map with a quiet basemap
-grid, the depot as an anchor mark, per-vehicle routes in the validated
-categorical palette (fixed slots, never cycled; dashed beyond slot 8), demand
-as node area with a size key, direct ``V<n>`` route labels, and — when a
-baseline solution is supplied — the heuristic plan as a recessive gray
-underlay beneath the inked optimized routes.
+for the shared design system): a dispatcher's wall map on a kerbside-concrete
+board, with a quiet basemap grid, the depot as an anchor mark, per-vehicle
+routes in the validated vehicle-livery palette (fixed slots, never cycled;
+dashed beyond slot 8), customer nodes in road-marking white sized by demand
+with a size key, direct ``V<n>`` route labels, and — when a baseline solution
+is supplied — the heuristic plan as a recessive gray underlay beneath the
+inked optimized routes.
+
+A route map is an **all-pairs** form: any two routes can end up adjacent, and
+eight livery slots cannot clear the all-pairs CVD / normal-vision floors (the
+measured worst pairs are in :mod:`routeopt.plate`). Vans cannot be folded into
+an "Other" bucket, so the map does not claim colour alone carries identity —
+the direct ``V<n>`` labels, the per-vehicle side panel and ``route_plan.csv``
+do, and the palette's job here is separation between *neighbouring* routes.
 """
 
 from __future__ import annotations
@@ -175,21 +183,29 @@ def plot_routes(
             direction = coords[far] - coords[depot]
             norm = float(np.hypot(*direction)) or 1.0
             lx, ly = coords[far] + direction / norm * (0.055 * span)
+            # A livery chip carries the identity; the text itself wears ink.
+            # (Three livery slots sit below 3:1 on the board — legible as a
+            # mark, not as 9pt type — so the label never wears the series hue.)
+            ax.scatter(
+                [lx], [ly], s=46, facecolor=colour, edgecolor=plate.SURFACE,
+                linewidths=1.2, zorder=8,
+            )
             ax.text(
-                lx, ly, f"V{v}", fontsize=9, fontweight="bold", color=colour,
-                ha="center", va="center", zorder=8, path_effects=_halo(3.0),
+                lx + 0.022 * span, ly, f"V{v}", fontsize=9, fontweight="bold",
+                color=plate.INK, ha="left", va="center", zorder=9,
+                path_effects=_halo(3.0),
             )
 
     # --- customers: demand as node area, ringed in white ---------------------
     ax.scatter(
         coords[cust, 0], coords[cust, 1],
         s=[_demand_area(instance.demands[n], max_demand) for n in cust],
-        facecolor="#ffffff", edgecolor=plate.SECONDARY, linewidths=0.8, zorder=3,
+        facecolor=plate.MARKING_WHITE, edgecolor=plate.SECONDARY, linewidths=0.8, zorder=3,
     )
 
     # --- depot: the anchor mark ----------------------------------------------
     dx, dy = float(coords[depot][0]), float(coords[depot][1])
-    ax.scatter([dx], [dy], s=430, facecolor="#ffffff", edgecolor=plate.INK, linewidths=1.5, zorder=5)
+    ax.scatter([dx], [dy], s=430, facecolor=plate.MARKING_WHITE, edgecolor=plate.INK, linewidths=1.5, zorder=5)
     ax.scatter([dx], [dy], s=140, facecolor="none", edgecolor=plate.INK, linewidths=1.1, zorder=6)
     ax.scatter([dx], [dy], s=26, facecolor=plate.INK, zorder=7)
     ax.annotate(
@@ -230,7 +246,7 @@ def plot_routes(
     for val in sorted({lo, int(round((lo + hi) / 2)), hi}):
         ax_leg.scatter(
             [0.085], [yy], s=_demand_area(val, max_demand),
-            facecolor="#ffffff", edgecolor=plate.SECONDARY, linewidths=0.8,
+            facecolor=plate.MARKING_WHITE, edgecolor=plate.SECONDARY, linewidths=0.8,
         )
         unit = "unit" if val == 1 else "units"
         ax_leg.text(0.20, yy, f"{val} {unit}", fontsize=8.2, color=plate.SECONDARY, va="center")
@@ -238,7 +254,7 @@ def plot_routes(
     yy -= 0.02
     _section(yy, "DEPOT")
     yy -= 0.055
-    ax_leg.scatter([0.085], [yy], s=200, facecolor="#ffffff", edgecolor=plate.INK, linewidths=1.2)
+    ax_leg.scatter([0.085], [yy], s=200, facecolor=plate.MARKING_WHITE, edgecolor=plate.INK, linewidths=1.2)
     ax_leg.scatter([0.085], [yy], s=64, facecolor="none", edgecolor=plate.INK, linewidths=0.9)
     ax_leg.scatter([0.085], [yy], s=13, facecolor=plate.INK)
     ax_leg.text(0.20, yy, "routes start & end here",
@@ -248,6 +264,54 @@ def plot_routes(
     fig.savefig(path, facecolor=plate.SURFACE)
     plt.close(fig)
     return path
+
+
+def solution_from_plan_csv(
+    instance: Instance,
+    path: Path,
+    metric: str = "euclidean",
+    method: str = "or-tools",
+) -> Solution:
+    """Rebuild the exact plan that ``route_plan.csv`` records.
+
+    ``route_plan.csv`` already holds the committed answer stop by stop, so the
+    map can be re-drawn from it without re-running a wall-clock metaheuristic
+    that would land on slightly different routes. Distances are recomputed from
+    the instance rather than read back, so the rebuilt :class:`Solution` is a
+    function of the geometry, not of the file's rounding.
+    """
+    df = pd.read_csv(path)
+    routes = [
+        [int(n) for n in grp.sort_values("stop_order")["node"]]
+        for _, grp in df.sort_values(["vehicle", "stop_order"]).groupby("vehicle", sort=True)
+    ]
+    dist = distance_matrix(instance, metric)
+    return Solution.from_routes(
+        method, routes, dist, instance.demands, instance.capacity
+    )
+
+
+def replot_from_plan(
+    instance: Instance, out_dir: Path | None = None, metric: str = "euclidean"
+) -> Path:
+    """Redraw Plate 01 from the committed plan — no solver, byte-reproducible.
+
+    The route map is the one deliverable whose numbers come from a wall-clock
+    solve, so re-rendering it after a design change would otherwise move the
+    numbers with the paint. This reads the routes back from
+    ``route_plan.csv``, rebuilds the deterministic Clarke-Wright underlay, and
+    redraws the plate — same figures, new ink.
+    """
+    out_dir = out_dir or DELIVERABLES
+    dist = distance_matrix(instance, metric)
+    ort = solution_from_plan_csv(instance, out_dir / "route_plan.csv", metric)
+    return plot_routes(
+        instance,
+        ort,
+        out_dir / "routes.png",
+        baseline=clarke_wright(instance, dist),
+        metric=metric,
+    )
 
 
 def _pct_saved(baseline: float, improved: float) -> float:

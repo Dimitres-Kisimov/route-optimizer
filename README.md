@@ -167,6 +167,53 @@ heuristic under a fixed search budget, not a proven optimum — on a fixed budge
 the mixed pool's larger search space can even trail a homogeneous solve, and
 the deliverable reports whatever the numbers say.
 
+## Driver shifts & working time
+
+A van can drive all day; a **driver** cannot. Every layer above quietly assumed
+otherwise — the fleet-mix table had to close with "no route-duration cap is
+modelled", and driver shifts were named here as the next constraint. So there is
+a fifth layer that models the working day as three kinds of minute — **driving**
+(distance × 60 / speed), **service** (time at the kerb) and **breaks** — under a
+duty envelope, a daily driving limit, and a mandated break before a threshold of
+continuous driving.
+
+The defaults are **informed by EU Regulation (EC) No 561/2006** (9-hour daily
+driving, a 45-minute break before 4.5 hours continuous) inside a 10-hour duty
+envelope. That is a *modelling* choice, **not a compliance certification**: the
+15+30 split break, the twice-weekly driving extension, multi-manning, daily and
+weekly rest, and the Working Time Directive's own limits are all left out, and a
+5-minute delivery stop is deliberately not counted as rest.
+
+![Driver-shift board and cap curve for the 60-customer instance](deliverables/driver_shifts.svg)
+
+The same OR-Tools engine gets a **Duty** dimension whose per-vehicle span is
+capped, under the same deterministic solution limit. The span handed to the
+solver is the duty cap with the breaks the rules will insert *already paid for*,
+so a returned plan is legal **after** scheduling — and the audit re-checks it
+rather than assuming it.
+
+The honest findings on `n60` (`deliverables/driver_shifts.csv`):
+
+- **The statutory limits are slack on this data.** Audited against the 10-hour
+  envelope, today's shift-blind savings plan works a worst duty of **267 min**
+  (4h27) across 10 vans — **333 min of headroom** — and its worst *continuous*
+  drive is **227 min** against the 270-min break threshold, so **zero breaks**
+  are required. Nobody is close to a 9-hour drive. That is the number, so that
+  is what the deliverable says.
+- **So the layer's value here is pricing a *shorter* shift** — a half-day round,
+  an agency driver, a depot that must close early. Caps of 480 and 420 min cost
+  nothing (**1,001.6 km on 10 vans**, identical to the uncapped solve). At
+  **240 min** the cost is **+5.3% distance** (1,054.4 km), still on 10 vans. At
+  **210 min** it is **+17.5% distance and an eleventh van** (1,177.1 km) — the
+  service consequence the fleet-mix layer could only point at.
+- **At 180 min there is no plan at any fleet size**, and that is a *proof*, not
+  a search that gave up: one customer's out-and-back round trip alone exceeds
+  the cap, which a duty-aware greedy construction settles in one pass.
+
+Full table and write-up: `deliverables/driver_shifts.md`. The break rule is
+exercised and hand-checked in the test suite; whether it fires on a given
+instance depends on that instance's driving times, and on this one it does not.
+
 ## Run it
 
 ```bash
@@ -177,14 +224,17 @@ python -m routeopt --instance data/instances/n60.json --sweep-fleet  # fleet-siz
 python -m routeopt --instance data/instances/n60.json --service   # time-window (VRPTW) service-level analysis
 python -m routeopt --instance data/instances/n60.json --stress    # demand-uncertainty stress test (CSV+SVG+MD)
 python -m routeopt --instance data/instances/n60.json --mix       # heterogeneous fleet-mix (FSM) comparison (CSV+SVG+MD)
+python -m routeopt --instance data/instances/n60.json --shift     # driver-shift / working-time layer (CSV+SVG+MD)
 python web/build_data.py --instance data/instances/n60.json    # web/data.js -> open web/index.html offline
-pytest -q                                                      # 46 tests, ~40s
+pytest -q                                                      # 74 tests, ~50s
 ```
 
 `python -m routeopt --instance ...` also writes the deliverables:
 `deliverables/route_plan.csv` (vehicle, stop order, load, cumulative distance),
 `deliverables/routes.png`, and `deliverables/summary.md`. Knobs: `--metric
-manhattan`, `--time-limit 20`, `--compare`, `--no-deliverables`.
+manhattan`, `--time-limit 20`, `--compare`, `--no-deliverables`, and `--replot`
+(redraw the route map from the committed `route_plan.csv` — same numbers,
+current plate design, no re-solve).
 
 Open `web/index.html` (no server needed) for the interactive map: depot,
 customers and colored routes on a canvas, a metrics panel, a toggle to overlay
@@ -210,6 +260,12 @@ guided local search) — is written out in [`docs/METHOD.md`](docs/METHOD.md).
 - `routeopt/fleetmix.py` — the heterogeneous fleet mix (Fleet Size and Mix VRP):
   a typed vehicle pool with per-vehicle capacities, EUR/km and fixed deployment
   costs, and the mixed-vs-homogeneous comparison.
+- `routeopt/shifts.py` — driver shifts and working time: the break scheduler,
+  the conservative solver span bound, the duty-capped solve, and the cap sweep.
+- `routeopt/plate.py` — the dispatch-board design system every deliverable is
+  drawn in: asphalt/concrete neutrals, the validated eight-slot vehicle-livery
+  palette (light and dark), road-marking white and amber, and a reserved
+  traffic-signal status scale.
 
 ## Limitations
 
@@ -225,8 +281,17 @@ I would rather state these than oversell:
   modelled (the VRPTW / service-level layer above), but on **synthetic** windows
   and a fixed per-stop service time; the fleet *can* now be heterogeneous (the
   fleet-mix layer), but its catalogue costs are illustrative estimates, not
-  quotes. Multi-depot, driver shifts and variable service times are the next
-  constraints, and OR-Tools supports all of them.
+  quotes; driver shifts *are* now modelled (the working-time layer), but see the
+  next point. Multi-depot and variable service times are the next constraints,
+  and OR-Tools supports both.
+- **The working-time layer is a model, not a compliance tool.** It is *informed
+  by* EU Regulation (EC) No 561/2006, not an implementation of it — the split
+  break, driving extensions, multi-manning, daily/weekly rest and the Working
+  Time Directive's separate limits are not modelled. Travel time is
+  straight-line distance at one flat speed with no congestion, no time windows
+  and no depot loading time, so a real duty would be longer than every number
+  it reports. Nothing in it should be used to judge whether a real roster is
+  legal.
 - **GLS is time-limited, so its final number wobbles** a fraction of a percent between
   runs. The baselines are deterministic; the headline gap is stable to within noise.
   (The robustness layer avoids this by pinning OR-Tools to a fixed *solution limit*
